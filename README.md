@@ -3,11 +3,17 @@
 > **Problem Statement BYTE03: “The Invisible Barrier”**  
 > AI-assisted accessibility remediation and verification platform that detects programmatic barriers, tests whether users with disabilities can complete real tasks, safely applies allowlisted fixes through a pre-commit safety gate, and issues cryptographically verifiable compliance receipts.
 
+[![Live App](https://img.shields.io/badge/Live%20App-Vercel%20Production-black)](https://frontend-three-phi-56.vercel.app)
+[![Render Blueprint](https://img.shields.io/badge/Render-Deploy%20Container-46e3b7)](https://render.com/deploy?repo=https://github.com/Abijeeva2007/Vestora)
 [![Integration Tests](https://img.shields.io/badge/tests-18%20passed-emerald)](frontend/tests)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4.1-black)](https://nextjs.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-Chromium-45ba4b)](https://playwright.dev/)
 [![axe-core](https://img.shields.io/badge/axe--core-4.13-blue)](https://www.deque.com/axe/)
 [![n8n Compatible](https://img.shields.io/badge/n8n-Workflow%20Ready-ea4b71)](accessable-n8n-workflow.json)
+
+- **Live Public URL**: [https://frontend-three-phi-56.vercel.app](https://frontend-three-phi-56.vercel.app)
+- **Controlled Demo Target**: [https://frontend-three-phi-56.vercel.app/demo](https://frontend-three-phi-56.vercel.app/demo)
+- **1-Click Render Container Deployment**: [https://render.com/deploy?repo=https://github.com/Abijeeva2007/Vestora](https://render.com/deploy?repo=https://github.com/Abijeeva2007/Vestora)
 
 ---
 
