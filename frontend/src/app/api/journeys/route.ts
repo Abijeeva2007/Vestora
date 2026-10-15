@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { getStorageDir } from "@/lib/remediation-engine";
+import { runServerlessJourney } from "@/lib/serverless-scanner";
 import type { JourneyRun } from "@/types";
 
 const DEMO_PATH = "/demo";
@@ -69,8 +70,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const internalScanUrl = resolveInternalScanUrl();
-    const rawRunResult = await runJourneyProcess(internalScanUrl);
+    // Run journey runner (serverless resilient)
+    let rawRunResult: JourneyRun;
+    if (process.env.VERCEL) {
+      rawRunResult = await runServerlessJourney(resolvedDemoUrl);
+    } else {
+      try {
+        const internalScanUrl = resolveInternalScanUrl();
+        rawRunResult = await runJourneyProcess(internalScanUrl);
+        if (
+          rawRunResult.status === "error" &&
+          (rawRunResult.errorMessage?.includes("ERR_MODULE_NOT_FOUND") ||
+            rawRunResult.errorMessage?.includes("browserType.launch") ||
+            rawRunResult.errorMessage?.includes("playwright"))
+        ) {
+          rawRunResult = await runServerlessJourney(resolvedDemoUrl);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("Playwright runner unavailable, falling back to serverless journey runner:", msg);
+        rawRunResult = await runServerlessJourney(resolvedDemoUrl);
+      }
+    }
+
     const runResult: JourneyRun = {
       ...rawRunResult,
       target: resolvedDemoUrl,

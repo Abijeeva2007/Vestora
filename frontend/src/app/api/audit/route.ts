@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import type { AuditRun } from "@/types";
-
-
-
 import { getStorageDir } from "@/lib/remediation-engine";
+import { runServerlessAudit } from "@/lib/serverless-scanner";
 
 const DEMO_PATH = "/demo";
 const SCAN_TIMEOUT_MS = 60_000;
@@ -74,11 +72,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use fast local loopback for the headless browser process to avoid external hairpins
-    const internalScanUrl = resolveInternalScanUrl();
+    // Run scanner (serverless resilient)
+    let rawAuditRun: AuditRun;
+    if (process.env.VERCEL) {
+      rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
+    } else {
+      try {
+        const internalScanUrl = resolveInternalScanUrl();
+        rawAuditRun = await runScannerProcess(internalScanUrl);
+        if (
+          rawAuditRun.status === "error" &&
+          (rawAuditRun.errorMessage?.includes("ERR_MODULE_NOT_FOUND") ||
+            rawAuditRun.errorMessage?.includes("browserType.launch") ||
+            rawAuditRun.errorMessage?.includes("playwright"))
+        ) {
+          rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("Playwright runner unavailable, falling back to serverless scanner:", msg);
+        rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
+      }
+    }
 
-    // Run scanner
-    const rawAuditRun = await runScannerProcess(internalScanUrl);
     const auditRun: AuditRun = {
       ...rawAuditRun,
       target: resolvedDemoUrl,
