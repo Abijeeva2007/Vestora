@@ -41,11 +41,44 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate target url: ONLY allow scanning the verified demo page
-    let body: { targetUrl?: string } = {};
-    try {
-      body = await request.json();
-    } catch {}
+    // Validate request body: catch malformed JSON and validate payload fields
+    let body: Record<string, unknown> = {};
+    const rawText = await request.text().catch(() => "");
+    if (rawText.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(rawText);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          return NextResponse.json(
+            { error: "Invalid JSON body: expected a JSON object." },
+            { status: 400 }
+          );
+        }
+        body = parsed as Record<string, unknown>;
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid JSON body: malformed JSON format." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate supported fields
+    const allowedKeys = ["targetUrl"];
+    for (const key of Object.keys(body)) {
+      if (!allowedKeys.includes(key)) {
+        return NextResponse.json(
+          { error: `Invalid payload: unsupported field '${key}'.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (body.targetUrl !== undefined && typeof body.targetUrl !== "string") {
+      return NextResponse.json(
+        { error: "Invalid payload: targetUrl must be a string." },
+        { status: 400 }
+      );
+    }
 
     const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
@@ -53,7 +86,7 @@ export async function POST(request: NextRequest) {
     // If a targetUrl is explicitly passed, verify it points STRICTLY to /demo on this host/origin
     if (body.targetUrl) {
       try {
-        const parsed = new URL(body.targetUrl);
+        const parsed = new URL(body.targetUrl as string);
         const isAllowedHost =
           parsed.host === clientHost ||
           parsed.hostname === "localhost" ||
@@ -112,8 +145,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(auditRun);
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "An unexpected error occurred during scan execution.";
+    const rawMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+    const safeErrorMessage =
+      rawMessage.includes("ERR_") || rawMessage.includes("node:") || rawMessage.includes("/var/task") || rawMessage.includes("at ")
+        ? "An internal error occurred during audit execution."
+        : rawMessage;
     return NextResponse.json(
       {
         id: `run-err-${Date.now()}`,
@@ -122,7 +158,7 @@ export async function POST(request: NextRequest) {
         status: "error",
         issueCounts: { critical: 0, serious: 0, moderate: 0, minor: 0, total: 0 },
         issues: [],
-        errorMessage,
+        errorMessage: safeErrorMessage,
       },
       { status: 500 }
     );

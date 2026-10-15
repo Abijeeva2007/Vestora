@@ -121,13 +121,13 @@ export default function OverviewPage() {
 
           {/* Large Editorial Headline */}
           <div className="space-y-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-neutral-950 leading-[1.08]">
+            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-neutral-950 leading-[1.08] break-words">
               Experience the power of{" "}
-              <span className="inline-flex items-center align-middle whitespace-nowrap">
+              <span className="inline-flex flex-wrap items-center align-middle">
                 accessible digital{" "}
                 <Link
                   href="/journeys"
-                  className="inline-flex items-center gap-1.5 ml-2 mr-2 px-3.5 py-1.5 rounded-full bg-neutral-950 text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 mx-2 my-1 px-3.5 py-1.5 rounded-full bg-neutral-950 text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 transition-all shadow-xs"
                 >
                   <span>Learn More</span>
                   <span className="text-[11px]">↗</span>

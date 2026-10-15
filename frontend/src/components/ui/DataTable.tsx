@@ -24,8 +24,13 @@ export function DataTable<T>({
   caption,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto border border-neutral-200 rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-      <table className="w-full text-left text-sm border-collapse" role="table">
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={caption || "Scrollable data table"}
+      className="overflow-x-auto border border-neutral-200 rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)] focus:outline-none focus:ring-2 focus:ring-neutral-900"
+    >
+      <table className="w-full text-left text-sm border-collapse">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr className="bg-neutral-50/70 border-b border-neutral-200">
@@ -57,8 +62,7 @@ export function DataTable<T>({
                   }
                 }}
                 tabIndex={onRowClick ? 0 : undefined}
-                role={onRowClick ? "button" : "row"}
-                aria-pressed={onRowClick ? isSelected : undefined}
+                aria-selected={isSelected}
                 className={`transition-colors ${
                   onRowClick ? "cursor-pointer" : ""
                 } ${

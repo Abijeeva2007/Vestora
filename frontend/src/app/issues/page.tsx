@@ -299,7 +299,7 @@ export default function IssueExplorerPage() {
                 >
                   <span>Measured impact</span>
                   {currentJourney ? (
-                    <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.2 rounded-full font-semibold">
+                    <span className="text-[10px] bg-emerald-800 text-white px-1.5 py-0.2 rounded-full font-semibold">
                       Verified
                     </span>
                   ) : (
@@ -318,9 +318,9 @@ export default function IssueExplorerPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-neutral-950"></span>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900">
                     User Task Impact Matrix
-                  </h3>
+                  </h2>
                 </div>
                 <p className="text-xs text-neutral-500">
                   Correlates automated rule violations with measurable user task completion barriers observed during live browser journeys.

@@ -161,7 +161,10 @@ export default function FocusMapPage() {
               {currentJourney.screenshotBase64 ? (
                 <div
                   ref={containerRef}
-                  className="relative overflow-auto border border-neutral-200 rounded-xl max-h-[700px] bg-neutral-50"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Visual tab order preview canvas"
+                  className="relative overflow-auto border border-neutral-200 rounded-xl max-h-[700px] bg-neutral-50 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 >
                   {/* Base Screenshot */}
                   <img
@@ -225,7 +228,12 @@ export default function FocusMapPage() {
                   <span className="text-xs text-neutral-400 font-medium">Tab Order</span>
                 </div>
 
-                <div className="space-y-2.5 max-h-[620px] overflow-y-auto pr-1">
+                <div
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Tab sequence stop list"
+                  className="space-y-2.5 max-h-[620px] overflow-y-auto pr-1 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                >
                   {displayStops.map((stop) => {
                     const isSelected = activeStop?.order === stop.order;
                     return (

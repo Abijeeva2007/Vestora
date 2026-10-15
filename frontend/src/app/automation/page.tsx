@@ -428,7 +428,12 @@ export default function AutomationPage() {
           </div>
         </div>
 
-        <pre className="p-4 bg-neutral-950 text-neutral-200 rounded-xl text-xs font-mono overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="n8n workflow JSON preview"
+          className="p-4 bg-neutral-950 text-neutral-200 rounded-xl text-xs font-mono overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
+        >
           {JSON.stringify(SAMPLE_N8N_WORKFLOW, null, 2)}
         </pre>
       </div>
@@ -439,7 +444,12 @@ export default function AutomationPage() {
           Required Environment Variables &amp; Credentials
         </h3>
 
-        <div className="overflow-x-auto">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Environment variables reference table"
+          className="overflow-x-auto focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-neutral-300/80 text-neutral-500 font-semibold uppercase">

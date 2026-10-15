@@ -55,7 +55,7 @@ export default function VerificationReportsPage() {
               className={`px-5 py-2.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 shadow-xs ${
                 latestReceipt
                   ? "bg-neutral-950 text-white hover:bg-neutral-800 cursor-pointer"
-                  : "bg-neutral-100 text-neutral-400 border border-neutral-200 cursor-not-allowed opacity-60"
+                  : "bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed"
               }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -400,7 +400,12 @@ export default function VerificationReportsPage() {
             <h3 className="text-sm font-bold text-neutral-950 mb-3">
               Applied Code Patch (Sandbox Target)
             </h3>
-            <pre className="p-4 bg-neutral-950 text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
+            <pre
+              tabIndex={0}
+              role="region"
+              aria-label="Applied unified diff"
+              className="p-4 bg-neutral-950 text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
+            >
               {latestReceipt.appliedDiff}
             </pre>
           </div>
@@ -424,7 +429,12 @@ export default function VerificationReportsPage() {
                 Export JSON
               </button>
             </div>
-            <pre className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-800 overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed">
+            <pre
+              tabIndex={0}
+              role="region"
+              aria-label="Cryptographic fix receipt JSON"
+              className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-800 overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            >
               {JSON.stringify(latestReceipt, null, 2)}
             </pre>
           </div>
