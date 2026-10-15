@@ -6,15 +6,11 @@ services:
     plan: free
     region: oregon
     healthCheckPath: /api/health
-    disk:
-      name: accessable-storage
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: STORAGE_DIR
-        value: /data
+        value: /app/storage
       - key: N8N_WEBHOOK_SECRET
         generateValue: true
       - key: N8N_WEBHOOK_URL

@@ -15,12 +15,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV STORAGE_DIR=/data
+ENV STORAGE_DIR=/app/storage
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 
 # Ensure persistent storage directory exists
-RUN mkdir -p /data && chmod 777 /data
+RUN mkdir -p /data /app/storage && chmod -R 777 /data /app/storage
 
 # Copy package descriptors from frontend
 COPY frontend/package.json frontend/package-lock.json ./
