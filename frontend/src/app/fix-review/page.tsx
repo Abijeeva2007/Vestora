@@ -42,6 +42,25 @@ export default function FixReviewPage() {
 
   return (
     <div className="space-y-8">
+      {/* Workflow Stage Indicator */}
+      <div className="p-3.5 bg-neutral-100/80 border border-neutral-200 rounded-2xl flex items-center justify-between text-xs font-semibold text-neutral-600 overflow-x-auto">
+        <div className="flex items-center gap-2">
+          <span className="text-neutral-400 font-normal">Workflow:</span>
+          <Link href="/audits" className="hover:text-neutral-900 transition-colors">1. Audit</Link>
+          <span className="text-neutral-300">→</span>
+          <Link href="/journeys" className="hover:text-neutral-900 transition-colors">2. Journey</Link>
+          <span className="text-neutral-300">→</span>
+          <span className="text-neutral-950 font-bold bg-white px-2.5 py-1 rounded-full shadow-xs border border-neutral-200">
+            3. Fix Review (Active)
+          </span>
+          <span className="text-neutral-300">→</span>
+          <Link href="/verification" className="hover:text-neutral-900 transition-colors">4. Verify &amp; Receipt</Link>
+        </div>
+        <Link href="/demo" className="text-neutral-950 hover:underline shrink-0 text-[11px]">
+          Target: /demo ↗
+        </Link>
+      </div>
+
       <PageHeader
         eyebrow="SAFE REMEDIATION ENGINE"
         title="Fix Review"
@@ -49,25 +68,23 @@ export default function FixReviewPage() {
         action={
           <div className="flex items-center gap-2.5">
             {activePatches.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => rollbackFix()}
-                  disabled={isRollingBack || isApplying}
-                  className="px-4 py-2 rounded-full border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
-                >
-                  {isRollingBack ? "Rolling back..." : "Rollback Latest"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => resetAll()}
-                  disabled={isRollingBack || isApplying}
-                  className="px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-xs"
-                >
-                  Reset All to Baseline
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => rollbackFix()}
+                disabled={isRollingBack || isApplying}
+                className="px-4 py-2 rounded-full border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
+              >
+                {isRollingBack ? "Rolling back..." : "Rollback Latest"}
+              </button>
             )}
+            <button
+              type="button"
+              onClick={() => resetAll()}
+              disabled={isRollingBack || isApplying}
+              className="px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-xs"
+            >
+              Reset Demo to Baseline
+            </button>
           </div>
         }
       />
@@ -77,6 +94,7 @@ export default function FixReviewPage() {
         <ErrorState
           title="Remediation Operation Failed"
           message={error}
+          retryLabel="Dismiss & Retry"
           onRetry={clearNotifications}
         />
       )}

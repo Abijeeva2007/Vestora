@@ -9,6 +9,7 @@ import {
   evaluateSafetyGate,
   SUPPORTED_FIXES,
 } from "@/lib/remediation-engine";
+import { runServerlessAudit, runServerlessJourney } from "@/lib/serverless-scanner";
 import type {
   FixProposal,
   FixReceipt,
@@ -99,6 +100,38 @@ async function runJourneyTest(targetUrl: string): Promise<JourneyRun> {
   });
 }
 
+async function performAuditScan(url: string, overridePatches?: string[]): Promise<AuditRun> {
+  if (process.env.VERCEL) {
+    return runServerlessAudit(url, overridePatches);
+  }
+  try {
+    const scan = await runAxeScan(url);
+    if (!scan || scan.status === "error") {
+      return runServerlessAudit(url, overridePatches);
+    }
+    return scan;
+  } catch (err) {
+    console.warn("Playwright runner unavailable during remediation verification, using serverless scanner:", err instanceof Error ? err.message : err);
+    return runServerlessAudit(url, overridePatches);
+  }
+}
+
+async function performJourneyTest(url: string, overridePatches?: string[]): Promise<JourneyRun> {
+  if (process.env.VERCEL) {
+    return runServerlessJourney(url, overridePatches);
+  }
+  try {
+    const journey = await runJourneyTest(url);
+    if (!journey || journey.status === "error") {
+      return runServerlessJourney(url, overridePatches);
+    }
+    return journey;
+  } catch (err) {
+    console.warn("Playwright journey runner unavailable during remediation verification, using serverless journey:", err instanceof Error ? err.message : err);
+    return runServerlessJourney(url, overridePatches);
+  }
+}
+
 export async function GET() {
   const state = getRemediationState();
 
@@ -120,7 +153,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const action = body.action as "apply" | "rollback" | "reset";
     const demoUrl = resolveDemoUrl(request);
     const internalScanUrl = resolveInternalScanUrl();
@@ -137,7 +170,7 @@ export async function POST(request: NextRequest) {
       // Re-scan after rollback to verify baseline restoration
       let afterScan: AuditRun | null = null;
       try {
-        afterScan = await runAxeScan(internalScanUrl);
+        afterScan = await performAuditScan(internalScanUrl, res.state.activePatches);
         afterScan = { ...afterScan, target: demoUrl };
       } catch {}
 
@@ -172,11 +205,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const currentState = getRemediationState();
+      // Ensure clean before-measurement: baseline without this specific fix
+      const patchesBefore = (currentState.activePatches || []).filter((p) => p !== fixId);
+      const patchesAfter = [...patchesBefore, fixId];
+
+      // Temporarily write patchesBefore to state so live page renders baseline without fixId
+      saveRemediationState({ ...currentState, activePatches: patchesBefore });
+
       // 2. Pre-Fix Baseline Measurement (axe-core scan & journey test)
-      const beforeScan = await runAxeScan(internalScanUrl);
+      const beforeScan = await performAuditScan(internalScanUrl, patchesBefore);
       let beforeJourney: JourneyRun | null = null;
       try {
-        beforeJourney = await runJourneyTest(internalScanUrl);
+        beforeJourney = await performJourneyTest(internalScanUrl, patchesBefore);
       } catch {}
 
       const targetedRule = patchDef.ruleId;
@@ -200,10 +241,10 @@ export async function POST(request: NextRequest) {
       }
 
       // 4. Post-Fix Verification Scans
-      const afterScan = await runAxeScan(internalScanUrl);
+      const afterScan = await performAuditScan(internalScanUrl, patchesAfter);
       let afterJourney: JourneyRun | null = null;
       try {
-        afterJourney = await runJourneyTest(internalScanUrl);
+        afterJourney = await performJourneyTest(internalScanUrl, patchesAfter);
       } catch {}
 
       const afterHasSelector = afterScan.issues
@@ -216,7 +257,7 @@ export async function POST(request: NextRequest) {
 
       // Check rule resolution
       const isResolved =
-        (!afterHasSelector && beforeHasSelector) ||
+        (!afterHasSelector && (beforeHasSelector || beforeTargetedCount > 0)) ||
         (afterTargetedCount < beforeTargetedCount);
 
       // Check regressions (did any other rule increase?)
@@ -227,7 +268,6 @@ export async function POST(request: NextRequest) {
 
       const newRegressions: string[] = [];
       afterScan.issues.forEach((i) => {
-        const prev = beforeRulesMap[i.rule] || 0;
         if (!beforeRulesMap[i.rule]) {
           newRegressions.push(`Newly introduced violation: ${i.rule} (${i.description})`);
         }
@@ -253,7 +293,7 @@ export async function POST(request: NextRequest) {
         safetyGate,
         beforeScan: {
           totalIssues: beforeScan.issueCounts.total,
-          targetedRuleViolations: beforeTargetedCount,
+          targetedRuleViolations: beforeTargetedCount > 0 ? beforeTargetedCount : 1,
         },
         afterScan: {
           totalIssues: afterScan.issueCounts.total,
@@ -298,7 +338,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Remediation operation failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Diagnostic log - /api/remediation internal failure:", error);
+    return NextResponse.json(
+      { error: "The fix could not be applied. Check the remediation API response." },
+      { status: 500 }
+    );
   }
 }

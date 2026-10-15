@@ -81,10 +81,24 @@ export default function DemoClient({ activePatches = [] }: DemoClientProps) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
                 Patched State
               </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await fetch("/api/remediation", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "reset" }),
+                  });
+                  window.location.reload();
+                }}
+                className="px-3 py-1 rounded-full bg-neutral-900 text-white text-[11px] font-semibold hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
+              >
+                Reset to Baseline ↺
+              </button>
             </div>
           </div>
         ) : (

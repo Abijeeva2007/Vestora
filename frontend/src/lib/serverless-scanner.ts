@@ -1,13 +1,13 @@
 import type { AuditRun, JourneyRun, Issue, FocusStop, JourneyTask, JourneyStep } from "@/types";
 import { getRemediationState } from "./remediation-engine";
 
-export async function runServerlessAudit(targetUrl: string): Promise<AuditRun> {
+export async function runServerlessAudit(targetUrl: string, overridePatches?: string[]): Promise<AuditRun> {
   const startTime = new Date().toISOString();
   // Realistic simulation latency for scanning DOM
-  await new Promise((resolve) => setTimeout(resolve, 850));
+  await new Promise((resolve) => setTimeout(resolve, 350));
 
   const state = getRemediationState();
-  const activePatches = state.activePatches || [];
+  const activePatches = overridePatches !== undefined ? overridePatches : (state.activePatches || []);
 
   const hasBookmarkFix = activePatches.includes("fix-bookmark-btn");
   const hasLabelFix = activePatches.includes("fix-national-id-input");
@@ -206,12 +206,12 @@ export async function runServerlessAudit(targetUrl: string): Promise<AuditRun> {
   };
 }
 
-export async function runServerlessJourney(targetUrl: string): Promise<JourneyRun> {
+export async function runServerlessJourney(targetUrl: string, overridePatches?: string[]): Promise<JourneyRun> {
   const startTime = new Date().toISOString();
-  await new Promise((resolve) => setTimeout(resolve, 950));
+  await new Promise((resolve) => setTimeout(resolve, 350));
 
   const state = getRemediationState();
-  const activePatches = state.activePatches || [];
+  const activePatches = overridePatches !== undefined ? overridePatches : (state.activePatches || []);
 
   const hasBookmarkFix = activePatches.includes("fix-bookmark-btn");
   const hasLabelFix = activePatches.includes("fix-national-id-input");

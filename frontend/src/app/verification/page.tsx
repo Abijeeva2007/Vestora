@@ -41,6 +41,25 @@ export default function VerificationReportsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Workflow Stage Indicator */}
+      <div className="p-3.5 bg-neutral-100/80 border border-neutral-200 rounded-2xl flex items-center justify-between text-xs font-semibold text-neutral-600 overflow-x-auto">
+        <div className="flex items-center gap-2">
+          <span className="text-neutral-400 font-normal">Workflow:</span>
+          <Link href="/audits" className="hover:text-neutral-900 transition-colors">1. Audit</Link>
+          <span className="text-neutral-300">→</span>
+          <Link href="/journeys" className="hover:text-neutral-900 transition-colors">2. Journey</Link>
+          <span className="text-neutral-300">→</span>
+          <Link href="/fix-review" className="hover:text-neutral-900 transition-colors">3. Fix Review</Link>
+          <span className="text-neutral-300">→</span>
+          <span className="text-neutral-950 font-bold bg-white px-2.5 py-1 rounded-full shadow-xs border border-neutral-200">
+            4. Verify &amp; Receipt (Active)
+          </span>
+        </div>
+        <Link href="/demo" className="text-neutral-950 hover:underline shrink-0 text-[11px]">
+          Target: /demo ↗
+        </Link>
+      </div>
+
       <PageHeader
         eyebrow="CRYPTOGRAPHIC COMPLIANCE RECEIPTS"
         title="Verification Reports"
@@ -71,6 +90,7 @@ export default function VerificationReportsPage() {
         <ErrorState
           title="Verification Action Failed"
           message={error}
+          retryLabel="Dismiss & Retry"
           onRetry={clearNotifications}
         />
       )}
@@ -98,7 +118,13 @@ export default function VerificationReportsPage() {
                   <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                     Remediation Verification Receipt
                   </span>
-                  <StatusPill status="pass" label="Verified Cleared" />
+                  {latestReceipt.finalStatus === "verified_resolved" ? (
+                    <StatusPill status="pass" label="Verified Cleared" />
+                  ) : latestReceipt.finalStatus === "rolled_back" ? (
+                    <StatusPill status="unavailable" label="Rolled Back" />
+                  ) : (
+                    <StatusPill status="fail" label="Verification Failed" />
+                  )}
                   <span className="text-xs font-mono font-bold bg-neutral-100 border border-neutral-200 px-2.5 py-0.5 rounded-full text-neutral-900">
                     {latestReceipt.rule}
                   </span>

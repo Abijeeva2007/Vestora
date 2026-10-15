@@ -1,12 +1,14 @@
 interface ErrorStateProps {
   title?: string;
   message: string;
+  retryLabel?: string;
   onRetry?: () => void;
 }
 
 export function ErrorState({
   title = "Audit Failed",
   message,
+  retryLabel = "Dismiss & Retry",
   onRetry,
 }: ErrorStateProps) {
   return (
@@ -33,7 +35,7 @@ export function ErrorState({
               onClick={onRetry}
               className="mt-4 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
             >
-              Retry Audit
+              {retryLabel}
             </button>
           )}
         </div>

@@ -7,7 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/integration.test.mjs tests/automation.test.mjs tests/audit-api.test.mjs"
+    "test": "node --experimental-strip-types --test tests/integration.test.mjs tests/automation.test.mjs tests/audit-api.test.mjs tests/e2e-demo-flow.test.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
 import type {
   FixProposal,
@@ -16,10 +17,24 @@ export function getStorageDir(): string {
   if (existsSync("/data")) {
     return "/data";
   }
-  return process.cwd();
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT) {
+    return existsSync("/tmp") ? "/tmp" : tmpdir();
+  }
+  try {
+    const testFile = join(process.cwd(), `.write-test-${process.pid}`);
+    writeFileSync(testFile, "test", "utf-8");
+    unlinkSync(testFile);
+    return process.cwd();
+  } catch {
+    return existsSync("/tmp") ? "/tmp" : tmpdir();
+  }
 }
 
-const STATE_FILE = join(getStorageDir(), ".remediation-state.json");
+function getStateFilePath(): string {
+  return join(getStorageDir(), ".remediation-state.json");
+}
+
+let inMemoryState: RemediationState | null = null;
 const DEMO_FILE = join(process.cwd(), "src/app/demo/DemoClient.tsx");
 
 // ---------------------------------------------------------------------------
@@ -157,12 +172,21 @@ function computeDemoChecksum(): string {
 }
 
 export function getRemediationState(): RemediationState {
+  const stateFile = getStateFilePath();
   try {
-    if (existsSync(STATE_FILE)) {
-      const raw = readFileSync(STATE_FILE, "utf-8");
-      return JSON.parse(raw);
+    if (existsSync(stateFile)) {
+      const raw = readFileSync(stateFile, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.activePatches)) {
+        inMemoryState = parsed;
+        return parsed;
+      }
     }
   } catch {}
+
+  if (inMemoryState) {
+    return inMemoryState;
+  }
 
   const defaultState: RemediationState = {
     version: 0,
@@ -172,18 +196,21 @@ export function getRemediationState(): RemediationState {
     latestReceipt: null,
   };
 
+  inMemoryState = defaultState;
   try {
-    writeFileSync(STATE_FILE, JSON.stringify(defaultState, null, 2), "utf-8");
+    writeFileSync(stateFile, JSON.stringify(defaultState, null, 2), "utf-8");
   } catch {}
 
   return defaultState;
 }
 
 export function saveRemediationState(state: RemediationState): void {
+  inMemoryState = state;
+  const stateFile = getStateFilePath();
   try {
-    writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+    writeFileSync(stateFile, JSON.stringify(state, null, 2), "utf-8");
   } catch (err) {
-    console.error("Failed to write remediation state:", err);
+    console.warn("Notice: Saved remediation state in-memory (disk write skipped):", err);
   }
 }
 
@@ -306,26 +333,30 @@ export function rollbackPatch(rollbackToken?: string): {
   let targetSnapshot: RemediationSnapshot | undefined;
 
   if (rollbackToken) {
-    // Find snapshot matching token and roll back to the state PRIOR to it
     const idx = state.rollbackHistory.findIndex((s) => s.rollbackToken === rollbackToken);
     if (idx !== -1) {
       targetSnapshot = state.rollbackHistory[idx + 1];
     }
   } else {
-    // Default rollback: roll back the most recent snapshot
     targetSnapshot = state.rollbackHistory[1];
   }
 
   const restoredActive = targetSnapshot ? targetSnapshot.activePatches : [];
   const newVersion = state.version + 1;
 
+  // If restoring back to baseline (0 active patches), clear latestReceipt so verification page accurately reflects baseline
+  const updatedReceipt = restoredActive.length === 0
+    ? null
+    : (state.latestReceipt ? { ...state.latestReceipt, finalStatus: "rolled_back" as const } : null);
+
   const updatedState: RemediationState = {
     ...state,
     version: newVersion,
     activePatches: restoredActive,
-    rollbackHistory: state.rollbackHistory.filter(
-      (s) => s.rollbackToken !== rollbackToken
-    ),
+    latestReceipt: updatedReceipt,
+    rollbackHistory: rollbackToken
+      ? state.rollbackHistory.filter((s) => s.rollbackToken !== rollbackToken)
+      : state.rollbackHistory.slice(1),
   };
 
   saveRemediationState(updatedState);
@@ -338,10 +369,10 @@ export function rollbackPatch(rollbackToken?: string): {
 }
 
 export function resetRemediation(): RemediationState {
-  const state = getRemediationState();
+  const defaultChecksum = computeDemoChecksum();
   const resetState: RemediationState = {
-    version: state.version + 1,
-    originalChecksum: state.originalChecksum,
+    version: (inMemoryState?.version || 0) + 1,
+    originalChecksum: defaultChecksum,
     activePatches: [],
     rollbackHistory: [],
     latestReceipt: null,
