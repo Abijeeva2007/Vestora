@@ -1,0 +1,22 @@
+[project]
+name = "vestora-backend"
+version = "0.1.0"
+description = "BYTEATHON 2026 starter backend (FastAPI)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "python-dotenv>=1.2.4",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "httpx2>=2.13.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

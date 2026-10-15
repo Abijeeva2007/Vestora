@@ -1,0 +1,168 @@
+{
+  "name": "AccessAble AI — CI/CD Accessibility Verification Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "accessable-pr-trigger",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-trigger",
+      "name": "GitHub PR Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "targetUrl",
+              "value": "={{ $json.body.pull_request ? $json.body.pull_request.head.repo.html_url : 'http://localhost:3000/demo' }}"
+            },
+            {
+              "name": "prNumber",
+              "value": "={{ $json.body.number || 'PR-101' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-extract-payload",
+      "name": "Extract PR Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/automation/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-n8n-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET || 'test-secret-key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "audit"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-axe-audit",
+      "name": "Execute axe-core Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/automation/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-n8n-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET || 'test-secret-key' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "journey"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-journey-test",
+      "name": "Execute Playwright Journey",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const audit = $('Execute axe-core Audit').first().json.result;\nconst journey = $('Execute Playwright Journey').first().json.result;\n\nconst totalIssues = audit.issueCounts.total;\nconst criticalCount = audit.issueCounts.critical;\nconst journeyTasks = journey.tasks || [];\nconst failingTasks = journeyTasks.filter(t => t.status === 'failed' || t.status === 'blocked');\n\nconst pass = totalIssues === 0 && failingTasks.length === 0;\n\nconst summaryMarkdown = `## 🛡️ AccessAble AI Verification Report\\n\\n` +\n  `**Automated Checks:** ${totalIssues} violations (${criticalCount} critical, ${audit.issueCounts.serious} serious)\\n` +\n  `**Journey Testing:** ${journeyTasks.length - failingTasks.length}/${journeyTasks.length} tasks completed successfully\\n` +\n  `**Status:** ${pass ? '✅ PASSED — Ready to merge' : '❌ BLOCKED — Actionable barriers detected'}\\n\\n` +\n  (failingTasks.length > 0 ? `### ⚠️ Failing Tasks:\\n` + failingTasks.map(t => `- **${t.title}** (${t.persona}): ${t.explanation}`).join('\\n') : '');\n\nreturn [{ json: { pass, totalIssues, summaryMarkdown } }];"
+      },
+      "id": "node-evaluate-compliance",
+      "name": "Format Compliance Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "GitHub PR Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract PR Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PR Metadata": {
+      "main": [
+        [
+          {
+            "node": "Execute axe-core Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute axe-core Audit": {
+      "main": [
+        [
+          {
+            "node": "Execute Playwright Journey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Playwright Journey": {
+      "main": [
+        [
+          {
+            "node": "Format Compliance Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

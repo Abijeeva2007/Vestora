@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" fill="none">
+  <rect width="400" height="240" rx="16" fill="#F8FAFC"/>
+  <circle cx="200" cy="100" r="54" fill="#0F172A" fill-opacity="0.04" stroke="#CBD5E1" stroke-width="2"/>
+  <path d="M200 68L236 86L200 104L164 86L200 68Z" fill="#0F172A"/>
+  <path d="M176 96V118C176 126 186 134 200 134C214 134 224 126 224 118V96" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+  <path d="M236 86V124" stroke="#0284C7" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="236" cy="126" r="3" fill="#0284C7"/>
+  <path d="M140 162C158 152 178 148 200 148C222 148 242 152 260 162" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 4"/>
+  <text x="200" y="190" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0F172A" letter-spacing="1.5">GLOBAL FELLOWSHIP SEALS &amp; MERIT</text>
+  <text x="200" y="210" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500" fill="#64748B">DEPARTMENT OF HIGHER RESEARCH • COHORT 2026</text>
+</svg>

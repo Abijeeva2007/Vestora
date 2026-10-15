@@ -1,0 +1,159 @@
+import { NextRequest, NextResponse } from "next/server";
+import { join } from "node:path";
+import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import type { AuditRun } from "@/types";
+
+
+
+const DEMO_PATH = "/demo";
+const SCAN_TIMEOUT_MS = 60_000;
+const CACHE_FILE = join(process.cwd(), ".latest-audit.json");
+
+let inMemoryLatestRun: AuditRun | null = null;
+
+// Initialize from file if exists
+try {
+  if (existsSync(CACHE_FILE)) {
+    const raw = readFileSync(CACHE_FILE, "utf-8");
+    inMemoryLatestRun = JSON.parse(raw);
+  }
+} catch {}
+
+function resolveDemoUrl(request: NextRequest): string {
+  const host = request.headers.get("host") || "localhost:3000";
+  const proto = request.headers.get("x-forwarded-proto") || "http";
+  return `${proto}://${host}${DEMO_PATH}`;
+}
+
+export async function GET() {
+  return NextResponse.json({
+    latestRun: inMemoryLatestRun,
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Validate target url: ONLY allow scanning the local demo page on this server
+    let body: { targetUrl?: string } = {};
+    try {
+      body = await request.json();
+    } catch {}
+
+    const resolvedDemoUrl = resolveDemoUrl(request);
+
+    // If a targetUrl is explicitly passed, verify it points STRICTLY to /demo on this host
+    if (body.targetUrl) {
+      try {
+        const parsed = new URL(body.targetUrl);
+        const resolved = new URL(resolvedDemoUrl);
+        if (parsed.host !== resolved.host || parsed.pathname !== DEMO_PATH) {
+          return NextResponse.json(
+            {
+              error: "Security violation: Scanning is strictly restricted to the local demo route (/demo).",
+            },
+            { status: 403 }
+          );
+        }
+      } catch {
+        return NextResponse.json({ error: "Invalid target URL." }, { status: 400 });
+      }
+    }
+
+    const targetUrl = resolvedDemoUrl;
+
+    // Run scanner
+    const auditRun = await runScannerProcess(targetUrl);
+
+    if (auditRun.status === "error") {
+      return NextResponse.json(auditRun, { status: 500 });
+    }
+
+    // Persist run
+    inMemoryLatestRun = auditRun;
+    try {
+      writeFileSync(CACHE_FILE, JSON.stringify(auditRun, null, 2), "utf-8");
+    } catch {}
+
+    return NextResponse.json(auditRun);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred during scan execution.";
+    return NextResponse.json(
+      {
+        id: `run-err-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        target: resolveDemoUrl(request),
+        status: "error",
+        issueCounts: { critical: 0, serious: 0, moderate: 0, minor: 0, total: 0 },
+        issues: [],
+        errorMessage,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function runScannerProcess(url: string): Promise<AuditRun> {
+  const { spawn } = await import("node:child_process");
+  const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
+
+  return new Promise((resolve, reject) => {
+    const child = spawn("sh", ["-c", `node "${scriptPath}" "${url}"`], {
+      cwd: process.cwd(),
+      env: { ...process.env, TARGET_URL: url },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        child.kill("SIGTERM");
+      } catch {}
+      reject(new Error(`Scan timed out after ${SCAN_TIMEOUT_MS / 1000} seconds.`));
+    }, SCAN_TIMEOUT_MS);
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(new Error(`Failed to start scanner process: ${err.message}`));
+    });
+
+    child.on("exit", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+
+      try {
+        const trimmed = stdout.trim();
+        if (!trimmed) {
+          throw new Error(stderr || `Process exited with code ${code} without output.`);
+        }
+        const parsed = JSON.parse(trimmed) as AuditRun;
+        resolve(parsed);
+      } catch (err) {
+        reject(
+          new Error(
+            stderr ||
+              (err instanceof Error
+                ? err.message
+                : `Failed to parse scanner output: ${stdout.slice(0, 300)}`)
+          )
+        );
+      }
+    });
+  });
+}
