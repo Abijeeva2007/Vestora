@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 /**
  * AccessAble AI — Realistic Scholarship Portal Demo Target
  * Route: /demo
@@ -22,6 +24,26 @@ export default function DemoClient({ activePatches = [] }: DemoClientProps) {
   const hasBookmarkFix = activePatches.includes("fix-bookmark-btn");
   const hasLabelFix = activePatches.includes("fix-national-id-input");
   const hasContrastFix = activePatches.includes("fix-submit-app-btn");
+
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const [submissionTime, setSubmissionTime] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      setSubmissionTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    }, 350);
+  };
+
+  const handleSaveDraft = () => {
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 4000);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased pb-20">
@@ -257,7 +279,7 @@ export default function DemoClient({ activePatches = [] }: DemoClientProps) {
                 </div>
               </div>
 
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Properly labeled field (tested in journey runner) */}
                 <div>
                   <label htmlFor="applicant-full-name" className="block text-sm font-semibold text-slate-900 mb-1.5">
@@ -349,11 +371,67 @@ export default function DemoClient({ activePatches = [] }: DemoClientProps) {
                   </p>
                 </div>
 
+                {/* Submission Confirmation Receipt */}
+                {isSubmitted && (
+                  <div
+                    id="submission-receipt"
+                    role="status"
+                    aria-live="polite"
+                    className="p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-500/40 text-emerald-950 shadow-sm transition-all"
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold shadow-xs">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <h3 className="font-bold text-base text-emerald-950">Application Successfully Filed!</h3>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Ref: #GLF-2026-9024
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-800 mt-1">
+                          Candidate application for <strong className="font-semibold text-emerald-950">Alex Mercer</strong> has been registered with the Global Leaders Fellowship review committee.
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-3 text-[11px] text-emerald-700">
+                          <span>Recorded: {submissionTime || "Just now"} • Verification Status: Verified</span>
+                          <button
+                            type="button"
+                            onClick={() => setIsSubmitted(false)}
+                            className="text-emerald-800 underline font-medium hover:text-emerald-950 transition-colors cursor-pointer"
+                          >
+                            Reset Form &amp; File Another
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Draft Saved Toast */}
+                {draftSaved && (
+                  <div
+                    id="draft-saved-notice"
+                    role="status"
+                    aria-live="polite"
+                    className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-900 flex items-center justify-between shadow-xs transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                      <p className="font-medium">Candidate application draft saved to local browser cache.</p>
+                    </div>
+                    <span className="text-[10px] text-sky-600">Auto-saved</span>
+                  </div>
+                )}
+
                 {/* Action buttons with HOOK 4: #submit-app-btn */}
                 <div className="flex items-center justify-between pt-6 border-t border-slate-200">
                   <button
                     type="button"
-                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                    onClick={handleSaveDraft}
+                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
                   >
                     Save Draft
                   </button>
@@ -362,19 +440,21 @@ export default function DemoClient({ activePatches = [] }: DemoClientProps) {
                     <button
                       id="submit-app-btn"
                       type="submit"
+                      disabled={isSubmitting}
                       style={{ backgroundColor: "#0369A1", color: "#ffffff" }}
-                      className="px-6 py-2.5 rounded-xl text-sm font-bold shadow-xs cursor-pointer hover:bg-[#0284C7] transition-colors focus:ring-2 focus:ring-sky-600 focus:outline-none"
+                      className="px-6 py-2.5 rounded-xl text-sm font-bold shadow-xs cursor-pointer hover:bg-[#0284C7] transition-colors focus:ring-2 focus:ring-sky-600 focus:outline-none disabled:opacity-75"
                     >
-                      Submit Application
+                      {isSubmitting ? "Submitting..." : "Submit Application"}
                     </button>
                   ) : (
                     <button
                       id="submit-app-btn"
                       type="submit"
+                      disabled={isSubmitting}
                       style={{ backgroundColor: "#93c5fd", color: "#eff6ff" }}
-                      className="px-6 py-2.5 rounded-xl text-sm font-bold shadow-xs cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl text-sm font-bold shadow-xs cursor-pointer disabled:opacity-75"
                     >
-                      Submit Application
+                      {isSubmitting ? "Submitting..." : "Submit Application"}
                     </button>
                   )}
                 </div>
