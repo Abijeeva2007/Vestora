@@ -13,6 +13,14 @@ function resolveDemoUrl(request: NextRequest): string {
   return `${proto}://${host}${DEMO_PATH}`;
 }
 
+function resolveInternalScanUrl(): string {
+  if (process.env.INTERNAL_TARGET_URL) {
+    return process.env.INTERNAL_TARGET_URL;
+  }
+  const port = process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}${DEMO_PATH}`;
+}
+
 function verifyWebhookSecret(request: NextRequest): boolean {
   const expectedSecret = process.env.N8N_WEBHOOK_SECRET;
   if (!expectedSecret) {
@@ -99,12 +107,13 @@ export async function POST(request: NextRequest) {
   if (action === "audit" || action === "scan") {
     const { spawn } = await import("node:child_process");
     const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
+    const internalScanUrl = resolveInternalScanUrl();
 
     try {
-      const scanResult = await new Promise((resolve, reject) => {
-        const child = spawn("sh", ["-c", `node "${scriptPath}" "${demoUrl}"`], {
+      const rawScanResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
+        const child = spawn("sh", ["-c", `node "${scriptPath}" "${internalScanUrl}"`], {
           cwd: process.cwd(),
-          env: { ...process.env, TARGET_URL: demoUrl },
+          env: { ...process.env, TARGET_URL: internalScanUrl },
           stdio: ["ignore", "pipe", "pipe"],
         });
 
@@ -133,7 +142,10 @@ export async function POST(request: NextRequest) {
         timestamp,
         status: "completed",
         action: "audit",
-        result: scanResult,
+        result: {
+          ...rawScanResult,
+          target: demoUrl,
+        },
       });
     } catch (err) {
       return NextResponse.json(
@@ -152,12 +164,13 @@ export async function POST(request: NextRequest) {
   if (action === "journey") {
     const { spawn } = await import("node:child_process");
     const scriptPath = join(process.cwd(), "scripts", "journey-runner.mjs");
+    const internalScanUrl = resolveInternalScanUrl();
 
     try {
-      const journeyResult = await new Promise((resolve, reject) => {
-        const child = spawn("sh", ["-c", `node "${scriptPath}" "${demoUrl}"`], {
+      const rawJourneyResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
+        const child = spawn("sh", ["-c", `node "${scriptPath}" "${internalScanUrl}"`], {
           cwd: process.cwd(),
-          env: { ...process.env, TARGET_URL: demoUrl },
+          env: { ...process.env, TARGET_URL: internalScanUrl },
           stdio: ["ignore", "pipe", "pipe"],
         });
 
@@ -186,7 +199,10 @@ export async function POST(request: NextRequest) {
         timestamp,
         status: "completed",
         action: "journey",
-        result: journeyResult,
+        result: {
+          ...rawJourneyResult,
+          target: demoUrl,
+        },
       });
     } catch (err) {
       return NextResponse.json(

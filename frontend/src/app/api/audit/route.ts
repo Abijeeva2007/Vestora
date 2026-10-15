@@ -5,9 +5,11 @@ import type { AuditRun } from "@/types";
 
 
 
+import { getStorageDir } from "@/lib/remediation-engine";
+
 const DEMO_PATH = "/demo";
 const SCAN_TIMEOUT_MS = 60_000;
-const CACHE_FILE = join(process.cwd(), ".latest-audit.json");
+const CACHE_FILE = join(getStorageDir(), ".latest-audit.json");
 
 let inMemoryLatestRun: AuditRun | null = null;
 
@@ -25,6 +27,14 @@ function resolveDemoUrl(request: NextRequest): string {
   return `${proto}://${host}${DEMO_PATH}`;
 }
 
+function resolveInternalScanUrl(): string {
+  if (process.env.INTERNAL_TARGET_URL) {
+    return process.env.INTERNAL_TARGET_URL;
+  }
+  const port = process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}${DEMO_PATH}`;
+}
+
 export async function GET() {
   return NextResponse.json({
     latestRun: inMemoryLatestRun,
@@ -33,23 +43,28 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate target url: ONLY allow scanning the local demo page on this server
+    // Validate target url: ONLY allow scanning the verified demo page
     let body: { targetUrl?: string } = {};
     try {
       body = await request.json();
     } catch {}
 
+    const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
 
-    // If a targetUrl is explicitly passed, verify it points STRICTLY to /demo on this host
+    // If a targetUrl is explicitly passed, verify it points STRICTLY to /demo on this host/origin
     if (body.targetUrl) {
       try {
         const parsed = new URL(body.targetUrl);
-        const resolved = new URL(resolvedDemoUrl);
-        if (parsed.host !== resolved.host || parsed.pathname !== DEMO_PATH) {
+        const isAllowedHost =
+          parsed.host === clientHost ||
+          parsed.hostname === "localhost" ||
+          parsed.hostname === "127.0.0.1";
+
+        if (!isAllowedHost || parsed.pathname !== DEMO_PATH) {
           return NextResponse.json(
             {
-              error: "Security violation: Scanning is strictly restricted to the local demo route (/demo).",
+              error: "Security violation: Scanning is strictly restricted to the verified demo route (/demo).",
             },
             { status: 403 }
           );
@@ -59,10 +74,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const targetUrl = resolvedDemoUrl;
+    // Use fast local loopback for the headless browser process to avoid external hairpins
+    const internalScanUrl = resolveInternalScanUrl();
 
     // Run scanner
-    const auditRun = await runScannerProcess(targetUrl);
+    const rawAuditRun = await runScannerProcess(internalScanUrl);
+    const auditRun: AuditRun = {
+      ...rawAuditRun,
+      target: resolvedDemoUrl,
+    };
 
     if (auditRun.status === "error") {
       return NextResponse.json(auditRun, { status: 500 });

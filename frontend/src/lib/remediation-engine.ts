@@ -9,7 +9,17 @@ import type {
   SafetyGateResult,
 } from "@/types";
 
-const STATE_FILE = join(process.cwd(), ".remediation-state.json");
+export function getStorageDir(): string {
+  if (process.env.STORAGE_DIR && existsSync(process.env.STORAGE_DIR)) {
+    return process.env.STORAGE_DIR;
+  }
+  if (existsSync("/data")) {
+    return "/data";
+  }
+  return process.cwd();
+}
+
+const STATE_FILE = join(getStorageDir(), ".remediation-state.json");
 const DEMO_FILE = join(process.cwd(), "src/app/demo/DemoClient.tsx");
 
 // ---------------------------------------------------------------------------

@@ -27,6 +27,14 @@ function resolveDemoUrl(request: NextRequest): string {
   return `${proto}://${host}${DEMO_PATH}`;
 }
 
+function resolveInternalScanUrl(): string {
+  if (process.env.INTERNAL_TARGET_URL) {
+    return process.env.INTERNAL_TARGET_URL;
+  }
+  const port = process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}${DEMO_PATH}`;
+}
+
 async function runAxeScan(targetUrl: string): Promise<AuditRun> {
   const { spawn } = await import("node:child_process");
   const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
@@ -115,6 +123,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const action = body.action as "apply" | "rollback" | "reset";
     const demoUrl = resolveDemoUrl(request);
+    const internalScanUrl = resolveInternalScanUrl();
 
     if (action === "reset") {
       const resetState = resetRemediation();
@@ -128,7 +137,8 @@ export async function POST(request: NextRequest) {
       // Re-scan after rollback to verify baseline restoration
       let afterScan: AuditRun | null = null;
       try {
-        afterScan = await runAxeScan(demoUrl);
+        afterScan = await runAxeScan(internalScanUrl);
+        afterScan = { ...afterScan, target: demoUrl };
       } catch {}
 
       return NextResponse.json({
@@ -163,10 +173,10 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. Pre-Fix Baseline Measurement (axe-core scan & journey test)
-      const beforeScan = await runAxeScan(demoUrl);
+      const beforeScan = await runAxeScan(internalScanUrl);
       let beforeJourney: JourneyRun | null = null;
       try {
-        beforeJourney = await runJourneyTest(demoUrl);
+        beforeJourney = await runJourneyTest(internalScanUrl);
       } catch {}
 
       const targetedRule = patchDef.ruleId;
@@ -190,10 +200,10 @@ export async function POST(request: NextRequest) {
       }
 
       // 4. Post-Fix Verification Scans
-      const afterScan = await runAxeScan(demoUrl);
+      const afterScan = await runAxeScan(internalScanUrl);
       let afterJourney: JourneyRun | null = null;
       try {
-        afterJourney = await runJourneyTest(demoUrl);
+        afterJourney = await runJourneyTest(internalScanUrl);
       } catch {}
 
       const afterHasSelector = afterScan.issues

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { getStorageDir } from "@/lib/remediation-engine";
 import type { JourneyRun } from "@/types";
 
 const DEMO_PATH = "/demo";
 const TIMEOUT_MS = 60_000;
-const CACHE_FILE = join(process.cwd(), ".latest-journey.json");
+const CACHE_FILE = join(getStorageDir(), ".latest-journey.json");
 
 let inMemoryLatestRun: JourneyRun | null = null;
 
@@ -22,6 +23,14 @@ function resolveDemoUrl(request: NextRequest): string {
   return `${proto}://${host}${DEMO_PATH}`;
 }
 
+function resolveInternalScanUrl(): string {
+  if (process.env.INTERNAL_TARGET_URL) {
+    return process.env.INTERNAL_TARGET_URL;
+  }
+  const port = process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}${DEMO_PATH}`;
+}
+
 export async function GET() {
   return NextResponse.json({
     latestRun: inMemoryLatestRun,
@@ -35,17 +44,22 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch {}
 
+    const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
 
-    // Security restriction: strictly enforce local demo target
+    // Security restriction: strictly enforce verified demo target
     if (body.targetUrl) {
       try {
         const parsed = new URL(body.targetUrl);
-        const resolved = new URL(resolvedDemoUrl);
-        if (parsed.host !== resolved.host || parsed.pathname !== DEMO_PATH) {
+        const isAllowedHost =
+          parsed.host === clientHost ||
+          parsed.hostname === "localhost" ||
+          parsed.hostname === "127.0.0.1";
+
+        if (!isAllowedHost || parsed.pathname !== DEMO_PATH) {
           return NextResponse.json(
             {
-              error: "Security violation: Journey tests are strictly restricted to the local demo route (/demo).",
+              error: "Security violation: Journey tests are strictly restricted to the verified demo route (/demo).",
             },
             { status: 403 }
           );
@@ -55,8 +69,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const targetUrl = resolvedDemoUrl;
-    const runResult = await runJourneyProcess(targetUrl);
+    const internalScanUrl = resolveInternalScanUrl();
+    const rawRunResult = await runJourneyProcess(internalScanUrl);
+    const runResult: JourneyRun = {
+      ...rawRunResult,
+      target: resolvedDemoUrl,
+    };
 
     if (runResult.status === "error") {
       return NextResponse.json(runResult, { status: 500 });
