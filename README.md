@@ -22,6 +22,7 @@ Every feature is honestly labeled according to its execution environment:
 | Feature Area | Description | Implementation Status | Notes |
 |:---|:---|:---:|:---|
 | **Automated Rule Audit** | axe-core 4.13.0 DOM sweep for WCAG 2.1 AA violations | **Live** | Live locally (Playwright + axe-core); lightweight serverless fallback on cloud hosts |
+| **Public Page Audit (Read-Only)** | Allowlisted read-only scan with SSRF & robots.txt defenses | **Live** | Strict allowlist, GET-only, SSRF-guarded, dual-engine fallback |
 | **Simulated User Journeys** | Multi-step assistive tasks (Keyboard, Form, 320px Reflow) | **Live** | Full browser execution locally; structural DOM simulation on serverless hosts |
 | **Visual Focus Map** | Bounding box overlays and sequential tab-order map | **Live** | Screenshot overlay locally; sandboxed iframe DOM overlay on hosted deployments |
 | **User Task Impact Matrix** | Correlates static syntax violations with user task blockers | **Live** | Categorizes findings into Task Blockers, Visual Barriers, Structural Enhancements |
@@ -108,6 +109,16 @@ Security and containment measures implemented across the application:
    - Zero secrets stored in repository or committed code.
    - Both root and `frontend/` ignore `.env*` except `.env.example`.
    - Filenames are sanitized against directory traversal (`..`, `/`, `\`).
+10. **Public Page Scanning & SSRF Defenses (`src/lib/public-scan.ts`):**
+    - **Strict Hostname Allowlist:** Hostnames must be explicitly configured in `SCAN_ALLOWLIST`. If empty or unset, public scanning is completely disabled (`Public page scanning is not enabled`).
+    - **HTTPS & Port Validation:** Accepts only `https:` URLs on standard port 443 with zero user credentials.
+    - **Comprehensive IP/SSRF Blacklist:** Resolves DNS before fetching and rejects private addresses (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`, `::1`), link-local (`169.254.0.0/16`, `fe80::/10`), cloud metadata (`169.254.169.254`, `metadata.google.internal`), carrier-grade NAT (`100.64.0.0/10`), documentation IPs, and IPv4-mapped IPv6.
+    - **Robots.txt Compliance:** Fetches target `robots.txt` before scanning and refuses any path disallowed for `*` or `AccessAble`.
+    - **Strict Fetch Constraints:** GET requests only (never submits forms or logs in), 20-second timeout, 3 MB response cap, and max 2 same-host redirects.
+    - **Shell Injection Immunity:** URLs are never evaluated in shell strings; subprocesses invoke Node directly via raw argument arrays without `sh -c`.
+    - **Dual-Engine Support:** Full Playwright scan with route containment locally; lightweight static DOM parser on hosted environments with the notice: `Lightweight scan: rules that need real layout, such as color contrast, may not be evaluated.`
+    - **Compliance Disclaimer:** Results are labeled `Automated checks only. Not a statement of compliance.` Findings are described as `automated checks reported N issues` without subjective claims.
+    - **Demo-Only Fix Isolation:** Fix previews and patch applications are strictly restricted to the demo target; third-party page scans display: `Fix preview is not available for third-party pages`.
 
 ---
 
@@ -143,6 +154,7 @@ All AI-generated content is visibly designated with a purple dotted badge:
 | `PORT` | Local server HTTP listening port | `3000` | No |
 | `NODE_ENV` | Application runtime environment | `development` | No |
 | `TARGET_URL` | Target URL for accessibility evaluation | `http://localhost:3000/demo` | No |
+| `SCAN_ALLOWLIST` | Comma-separated list of exact allowed hostnames for public read-only scanning | *(unset)* | No (feature disabled if unset) |
 | `AUTOMATION_API_KEY` | API key required to call `/api/automation/webhook` | *(unset)* | Yes for webhook CI/CD |
 | `RECEIPT_SIGNING_SECRET` | Secret key used to generate HMAC-SHA256 receipt signatures | *(unset)* | Optional (receipts are unsigned if unset) |
 | `AI_ENABLED` | Global toggle for optional AI assist features | `false` | No (defaults to disabled) |
