@@ -10,14 +10,95 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { StopBadge } from "@/components/ui/StopBadge";
+import { AiBadge } from "@/components/ui/AiBadge";
 
 export default function AuditsPage() {
   const { currentRun, isRunning, error, runAudit, fetchLatestRun } = useAuditStore();
   const [selectedTarget, setSelectedTarget] = useState("/demo");
 
+  // AI Assist State (Off by default)
+  const [isAiConfigured, setIsAiConfigured] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [summaryBullets, setSummaryBullets] = useState<string[] | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [expandedAiExplanations, setExpandedAiExplanations] = useState<Record<string, string>>({});
+  const [loadingAiIssueId, setLoadingAiIssueId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchLatestRun();
+    // Query internal endpoint to check if AI is configured
+    fetch("/api/ai/suggest")
+      .then((res) => res.json())
+      .then((data) => {
+        setIsAiConfigured(Boolean(data?.configured));
+      })
+      .catch(() => {
+        setIsAiConfigured(false);
+      });
   }, [fetchLatestRun]);
+
+  const handleGenerateSummary = async () => {
+    if (!currentRun || !aiEnabled) return;
+    setIsSummarizing(true);
+    setSummaryError(null);
+    try {
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "summarize",
+          summary: {
+            total: currentRun.issueCounts.total,
+            critical: currentRun.issueCounts.critical,
+            serious: currentRun.issueCounts.serious,
+            moderate: currentRun.issueCounts.moderate,
+            minor: currentRun.issueCounts.minor,
+            passedRules: currentRun.passesCount ?? 0,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.available && data.data?.bullets) {
+        setSummaryBullets(data.data.bullets);
+      } else {
+        setSummaryError(data.reason || "Failed to generate AI summary");
+      }
+    } catch {
+      setSummaryError("Failed to contact AI service");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  const handleExplainIssue = async (issueId: string, rule: string, severity: string, snippet?: string, helpText?: string) => {
+    if (!aiEnabled) return;
+    setLoadingAiIssueId(issueId);
+    try {
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "explain",
+          rule,
+          severity,
+          snippet: snippet || "",
+          helpText: helpText || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.available && data.data?.explanation) {
+        setExpandedAiExplanations((prev) => ({
+          ...prev,
+          [issueId]: data.data.explanation,
+        }));
+      }
+    } catch {
+      // Graceful fallback: do not alert or crash
+    } finally {
+      setLoadingAiIssueId(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -74,6 +155,88 @@ export default function AuditsPage() {
         <p className="text-xs text-neutral-500 mt-4 leading-relaxed">
           Scanning executes on headless Chromium to evaluate DOM nodes against automated axe-core rules. Automated checks identify programmatic violations and should be complemented by assistive journey testing and manual review for full accessibility coverage.
         </p>
+      </div>
+
+      {/* Optional AI Assist Settings Card */}
+      <div className="p-5 sm:p-6 rounded-[22px] bg-white border border-neutral-200/90 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900">
+                Optional AI Assist
+              </h3>
+              <AiBadge label="Optional" />
+            </div>
+            <p className="text-xs text-neutral-600 max-w-xl">
+              {isAiConfigured
+                ? "AI assist is optional and off by default. Enabling sends element snippets to Anthropic for analysis."
+                : "AI assist unavailable (API key not configured)"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={aiEnabled}
+                onChange={(e) => setAiEnabled(e.target.checked)}
+                disabled={!isAiConfigured}
+                className="sr-only peer"
+                aria-label="Toggle AI assist"
+              />
+              <div
+                className={`w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${
+                  !isAiConfigured
+                    ? "opacity-40 cursor-not-allowed"
+                    : "peer-checked:bg-purple-600 cursor-pointer"
+                }`}
+              ></div>
+              <span className="ml-3 text-xs font-semibold text-neutral-800">
+                {aiEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {aiEnabled && currentRun && (
+          <div className="mt-5 pt-5 border-t border-neutral-100 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-700">
+                Executive AI Summary
+              </span>
+              <button
+                type="button"
+                onClick={handleGenerateSummary}
+                disabled={isSummarizing}
+                className="px-3.5 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                {isSummarizing ? "Generating..." : summaryBullets ? "Regenerate Summary" : "Generate 3-Bullet Summary"}
+              </button>
+            </div>
+
+            {summaryBullets && (
+              <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <AiBadge label="AI-suggested, needs review" />
+                  <span className="text-[11px] text-neutral-500 font-medium">Suitable for non-technical stakeholders</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1.5 text-xs text-neutral-800">
+                  {summaryBullets.map((bullet, bIdx) => (
+                    <li key={bIdx} className="leading-relaxed">
+                      {bullet}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {summaryError && (
+              <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                {summaryError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Progress / Loading State */}
@@ -170,6 +333,48 @@ export default function AuditsPage() {
                       <p className="text-xs text-neutral-500 mt-1 line-clamp-1">
                         Impact: {issue.userImpact}
                       </p>
+
+                      {aiEnabled && (
+                        <div className="mt-2.5">
+                          {!expandedAiExplanations[issue.id] ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExplainIssue(
+                                  issue.id,
+                                  issue.rule,
+                                  issue.severity,
+                                  issue.affectedElements[0]?.html,
+                                  issue.helpText
+                                )
+                              }
+                              disabled={loadingAiIssueId === issue.id}
+                              className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full transition-colors flex items-center gap-1.5"
+                            >
+                              {loadingAiIssueId === issue.id ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />
+                                  <span>Generating AI explanation...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-[10px] uppercase font-bold text-purple-500">AI</span>
+                                  <span>Explain Why Barrier Matters</span>
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-xs text-neutral-800 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <AiBadge label="AI-suggested, needs review" />
+                              </div>
+                              <p className="leading-relaxed font-sans">
+                                {expandedAiExplanations[issue.id]}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
