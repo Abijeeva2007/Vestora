@@ -8,6 +8,34 @@ import { chromium } from "@playwright/test";
 async function runJourneys(targetUrl) {
   const startTime = new Date().toISOString();
   let browser = null;
+  let timedOut = false;
+
+  const HARD_TIMEOUT_MS = 20000;
+  const timer = setTimeout(async () => {
+    timedOut = true;
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
+    const errorRun = {
+      id: `journey-err-${Date.now()}`,
+      timestamp: startTime,
+      target: targetUrl,
+      status: "error",
+      tasks: [],
+      focusStops: [],
+      viewportWidth: 1024,
+      viewportHeight: 800,
+      horizontalOverflow320px: false,
+      overflowAmountPx: 0,
+      trapDetected: false,
+      unreachableControlsCount: 0,
+      errorMessage: "Hard timeout exceeded (20s)"
+    };
+    process.stdout.write(JSON.stringify(errorRun) + "\n");
+    process.exit(1);
+  }, HARD_TIMEOUT_MS);
 
   try {
     browser = await chromium.launch({
@@ -15,15 +43,43 @@ async function runJourneys(targetUrl) {
       args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
     });
 
+    let targetOrigin = "";
+    try {
+      targetOrigin = new URL(targetUrl).origin;
+    } catch {}
+
+    const setupPageContainment = async (p) => {
+      p.on("popup", (popup) => popup.close().catch(() => {}));
+      await p.route("**/*", (route) => {
+        try {
+          const reqUrl = new URL(route.request().url());
+          if (
+            !targetOrigin ||
+            reqUrl.origin === targetOrigin ||
+            reqUrl.protocol === "data:" ||
+            reqUrl.protocol === "blob:"
+          ) {
+            route.continue();
+          } else {
+            route.abort();
+          }
+        } catch {
+          route.abort();
+        }
+      });
+    };
+
     // -------------------------------------------------------------------------
     // Phase A: Desktop Viewport (1024x800) -> Focus Map & Keyboard Navigation
     // -------------------------------------------------------------------------
     const context = await browser.newContext({
-      viewport: { width: 1024, height: 900 }
+      viewport: { width: 1024, height: 900 },
+      acceptDownloads: false
     });
     const page = await context.newPage();
+    await setupPageContainment(page);
 
-    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
     try {
       await page.waitForLoadState("networkidle", { timeout: 4000 });
     } catch {}
@@ -366,10 +422,12 @@ async function runJourneys(targetUrl) {
     // Scenario 3: Task — Narrow-Screen Test (320 CSS pixels)
     // -------------------------------------------------------------------------
     const narrowContext = await browser.newContext({
-      viewport: { width: 320, height: 640 }
+      viewport: { width: 320, height: 640 },
+      acceptDownloads: false
     });
     const narrowPage = await narrowContext.newPage();
-    await narrowPage.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await setupPageContainment(narrowPage);
+    await narrowPage.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
     try {
       await narrowPage.waitForLoadState("networkidle", { timeout: 3000 });
     } catch {}
@@ -462,6 +520,7 @@ async function runJourneys(targetUrl) {
 
     process.stdout.write(JSON.stringify(journeyRun) + "\n");
   } catch (error) {
+    if (timedOut) return;
     const errorRun = {
       id: `journey-err-${Date.now()}`,
       timestamp: startTime,
@@ -479,6 +538,7 @@ async function runJourneys(targetUrl) {
     };
     process.stdout.write(JSON.stringify(errorRun) + "\n");
   } finally {
+    clearTimeout(timer);
     if (browser) {
       await browser.close().catch(() => {});
     }

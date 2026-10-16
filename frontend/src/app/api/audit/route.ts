@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { z } from "zod";
 import type { AuditRun } from "@/types";
 import { getStorageDir } from "@/lib/remediation-engine";
 import { executeAuditScan } from "@/lib/scan-engine";
+import {
+  sameOriginOnly,
+  rateLimit,
+  acquireRunLock,
+  releaseRunLock,
+  validateTargetUrl,
+} from "@/lib/security";
+
+const AuditRequestSchema = z.object({
+  targetUrl: z.string().optional(),
+}).strict();
 
 const DEMO_PATH = "/demo";
 const SCAN_TIMEOUT_MS = 60_000;
@@ -40,8 +52,28 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const originCheck = sameOriginOnly(request);
+  if (!originCheck.valid) {
+    return originCheck.response!;
+  }
+
+  const rl = rateLimit(request, "audit", 10, 60_000);
+  if (!rl.allowed) {
+    return rl.response!;
+  }
+
+  if (!acquireRunLock()) {
+    return NextResponse.json(
+      {
+        code: "RUN_IN_PROGRESS",
+        message: "A run is already in progress. Please wait for it to complete.",
+        retryable: true,
+      },
+      { status: 429 }
+    );
+  }
+
   try {
-    // Validate request body: catch malformed JSON and validate payload fields
     let body: Record<string, unknown> = {};
     const rawText = await request.text().catch(() => "");
     if (rawText.trim().length > 0) {
@@ -49,33 +81,40 @@ export async function POST(request: NextRequest) {
         const parsed = JSON.parse(rawText);
         if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
           return NextResponse.json(
-            { error: "Invalid JSON body: expected a JSON object." },
+            {
+              code: "INVALID_REQUEST",
+              message: "Invalid JSON body: expected a JSON object.",
+              error: "Invalid JSON body: expected a JSON object.",
+              retryable: false,
+            },
             { status: 400 }
           );
         }
         body = parsed as Record<string, unknown>;
       } catch {
         return NextResponse.json(
-          { error: "Invalid JSON body: malformed JSON format." },
+          {
+            code: "INVALID_REQUEST",
+            message: "Invalid JSON body: malformed JSON format.",
+            error: "Invalid JSON body: malformed JSON format.",
+            retryable: false,
+          },
           { status: 400 }
         );
       }
     }
 
-    // Validate supported fields
-    const allowedKeys = ["targetUrl"];
-    for (const key of Object.keys(body)) {
-      if (!allowedKeys.includes(key)) {
-        return NextResponse.json(
-          { error: `Invalid payload: unsupported field '${key}'.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (body.targetUrl !== undefined && typeof body.targetUrl !== "string") {
+    const validation = AuditRequestSchema.safeParse(body);
+    if (!validation.success) {
+      const firstIssue = validation.error.issues[0];
+      const field = firstIssue?.path[0] || "payload";
       return NextResponse.json(
-        { error: "Invalid payload: targetUrl must be a string." },
+        {
+          code: "INVALID_REQUEST",
+          message: `Invalid payload: unsupported field '${String(field)}'.`,
+          error: `Invalid payload: unsupported field '${String(field)}'.`,
+          retryable: false,
+        },
         { status: 400 }
       );
     }
@@ -83,25 +122,18 @@ export async function POST(request: NextRequest) {
     const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
 
-    // If a targetUrl is explicitly passed, verify it points STRICTLY to /demo on this host/origin
     if (body.targetUrl) {
-      try {
-        const parsed = new URL(body.targetUrl as string);
-        const isAllowedHost =
-          parsed.host === clientHost ||
-          parsed.hostname === "localhost" ||
-          parsed.hostname === "127.0.0.1";
-
-        if (!isAllowedHost || parsed.pathname !== DEMO_PATH) {
-          return NextResponse.json(
-            {
-              error: "Security violation: Scanning is strictly restricted to the verified demo route (/demo).",
-            },
-            { status: 403 }
-          );
-        }
-      } catch {
-        return NextResponse.json({ error: "Invalid target URL." }, { status: 400 });
+      const urlCheck = validateTargetUrl(body.targetUrl as string, clientHost);
+      if (!urlCheck.valid) {
+        return NextResponse.json(
+          {
+            code: "FORBIDDEN_TARGET",
+            message: urlCheck.error || "Scanning external targets is strictly disabled.",
+            error: "Security violation: Scanning is strictly restricted to the verified demo route (/demo).",
+            retryable: false,
+          },
+          { status: 403 }
+        );
       }
     }
 
@@ -110,14 +142,16 @@ export async function POST(request: NextRequest) {
     const auditRun = await executeAuditScan(resolvedDemoUrl, internalScanUrl);
 
     if (auditRun.status === "error") {
-      return NextResponse.json({
-        code: "AUDIT_SCAN_ERROR",
-        message: "The accessibility scan could not be completed. Please retry.",
-        retryable: true,
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          code: "AUDIT_SCAN_ERROR",
+          message: "The accessibility scan could not be completed. Please retry.",
+          retryable: true,
+        },
+        { status: 500 }
+      );
     }
 
-    // Persist run
     inMemoryLatestRun = auditRun;
     try {
       writeFileSync(CACHE_FILE, JSON.stringify(auditRun, null, 2), "utf-8");
@@ -134,5 +168,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    releaseRunLock();
   }
 }

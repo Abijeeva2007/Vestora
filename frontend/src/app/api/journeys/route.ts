@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { z } from "zod";
 import { getStorageDir } from "@/lib/remediation-engine";
 import { executeJourneyScan } from "@/lib/scan-engine";
+import {
+  sameOriginOnly,
+  rateLimit,
+  acquireRunLock,
+  releaseRunLock,
+  validateTargetUrl,
+} from "@/lib/security";
 import type { JourneyRun } from "@/types";
 
 const DEMO_PATH = "/demo";
 const TIMEOUT_MS = 60_000;
 const CACHE_FILE = join(getStorageDir(), ".latest-journey.json");
+
+const JourneyRequestSchema = z.object({
+  targetUrl: z.string().optional(),
+}).strict();
 
 let inMemoryLatestRun: JourneyRun | null = null;
 
@@ -39,34 +51,83 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const originCheck = sameOriginOnly(request);
+  if (!originCheck.valid) {
+    return originCheck.response!;
+  }
+
+  const rl = rateLimit(request, "journeys", 10, 60_000);
+  if (!rl.allowed) {
+    return rl.response!;
+  }
+
+  if (!acquireRunLock()) {
+    return NextResponse.json(
+      {
+        code: "RUN_IN_PROGRESS",
+        message: "A run is already in progress. Please wait for it to complete.",
+        retryable: true,
+      },
+      { status: 429 }
+    );
+  }
+
   try {
-    let body: { targetUrl?: string } = {};
-    try {
-      body = await request.json();
-    } catch {}
+    let body: Record<string, unknown> = {};
+    const rawText = await request.text().catch(() => "");
+    if (rawText.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(rawText);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          return NextResponse.json(
+            {
+              code: "INVALID_REQUEST",
+              message: "Invalid JSON body: expected a JSON object.",
+              retryable: false,
+            },
+            { status: 400 }
+          );
+        }
+        body = parsed as Record<string, unknown>;
+      } catch {
+        return NextResponse.json(
+          {
+            code: "INVALID_REQUEST",
+            message: "Invalid JSON body: malformed JSON format.",
+            retryable: false,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const validation = JourneyRequestSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          code: "INVALID_REQUEST",
+          message: "Invalid payload parameters.",
+          retryable: false,
+        },
+        { status: 400 }
+      );
+    }
 
     const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
 
-    // Security restriction: strictly enforce verified demo target
     if (body.targetUrl) {
-      try {
-        const parsed = new URL(body.targetUrl);
-        const isAllowedHost =
-          parsed.host === clientHost ||
-          parsed.hostname === "localhost" ||
-          parsed.hostname === "127.0.0.1";
-
-        if (!isAllowedHost || parsed.pathname !== DEMO_PATH) {
-          return NextResponse.json(
-            {
-              error: "Security violation: Journey tests are strictly restricted to the verified demo route (/demo).",
-            },
-            { status: 403 }
-          );
-        }
-      } catch {
-        return NextResponse.json({ error: "Invalid target URL." }, { status: 400 });
+      const urlCheck = validateTargetUrl(body.targetUrl as string, clientHost);
+      if (!urlCheck.valid) {
+        return NextResponse.json(
+          {
+            code: "FORBIDDEN_TARGET",
+            message: urlCheck.error || "Scanning external targets is strictly disabled.",
+            error: "Security violation: Journey tests are strictly restricted to the verified demo route (/demo).",
+            retryable: false,
+          },
+          { status: 403 }
+        );
       }
     }
 
@@ -75,11 +136,14 @@ export async function POST(request: NextRequest) {
     const runResult = await executeJourneyScan(resolvedDemoUrl, internalScanUrl);
 
     if (runResult.status === "error") {
-      return NextResponse.json({
-        code: "JOURNEY_SCAN_ERROR",
-        message: "The keyboard journey test could not be completed. Please retry.",
-        retryable: true,
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          code: "JOURNEY_SCAN_ERROR",
+          message: "The keyboard journey test could not be completed. Please retry.",
+          retryable: true,
+        },
+        { status: 500 }
+      );
     }
 
     inMemoryLatestRun = runResult;
@@ -98,5 +162,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    releaseRunLock();
   }
 }

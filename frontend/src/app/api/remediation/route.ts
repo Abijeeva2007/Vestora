@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
+import { z } from "zod";
 import {
   getRemediationState,
   saveRemediationState,
@@ -10,6 +11,7 @@ import {
   SUPPORTED_FIXES,
 } from "@/lib/remediation-engine";
 import { getEngine, executeAuditScan, executeJourneyScan } from "@/lib/scan-engine";
+import { sameOriginOnly, rateLimit, signReceiptPayload } from "@/lib/security";
 import type {
   FixProposal,
   FixReceipt,
@@ -18,6 +20,12 @@ import type {
 } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+const RemediationSchema = z.object({
+  action: z.enum(["apply", "rollback", "reset"]),
+  fixId: z.string().optional(),
+  rollbackToken: z.string().optional(),
+});
 
 const DEMO_PATH = "/demo";
 
@@ -66,8 +74,31 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const originCheck = sameOriginOnly(request);
+    if (!originCheck.valid) {
+      return originCheck.response!;
+    }
+
+    const rl = rateLimit(request, "remediation", 30, 60_000);
+    if (!rl.allowed) {
+      return rl.response!;
+    }
+
     const body = await request.json().catch(() => ({}));
-    const action = body.action as "apply" | "rollback" | "reset";
+    const parseResult = RemediationSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          code: "INVALID_PAYLOAD",
+          message: "Invalid remediation request structure.",
+          retryable: false,
+          error: "Invalid action.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { action } = parseResult.data;
     const demoUrl = resolveDemoUrl(request);
     const internalScanUrl = resolveInternalScanUrl();
 
@@ -235,16 +266,25 @@ export async function POST(request: NextRequest) {
         ],
       };
 
+      // Sign receipt with HMAC-SHA256 if secret configured
+      const signInfo = signReceiptPayload(receipt);
+      const signedReceipt: FixReceipt = {
+        ...receipt,
+        signature: signInfo.signature,
+        signatureAlgorithm: signInfo.algorithm,
+        signatureStatus: signInfo.status,
+      };
+
       // Persist latest receipt in state
       const stateWithReceipt = {
         ...applyResult.state,
-        latestReceipt: receipt,
+        latestReceipt: signedReceipt,
       };
       saveRemediationState(stateWithReceipt);
 
       return NextResponse.json({
         success: true,
-        receipt,
+        receipt: signedReceipt,
         rollbackToken: applyResult.rollbackToken,
         state: stateWithReceipt,
       });

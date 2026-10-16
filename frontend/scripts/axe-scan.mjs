@@ -34,6 +34,31 @@ function normalizeSeverity(impact) {
 async function runScan(targetUrl) {
   let browser = null;
   const startTime = new Date().toISOString();
+  let timedOut = false;
+
+  const HARD_TIMEOUT_MS = 20000;
+  const timer = setTimeout(async () => {
+    timedOut = true;
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
+    const errRun = {
+      id: `run-err-${Date.now()}`,
+      timestamp: startTime,
+      target: targetUrl,
+      status: "error",
+      durationMs: HARD_TIMEOUT_MS,
+      passesCount: 0,
+      incompleteCount: 0,
+      issueCounts: { critical: 0, serious: 0, moderate: 0, minor: 0, total: 0 },
+      issues: [],
+      errorMessage: "Hard timeout exceeded (20s)"
+    };
+    process.stdout.write(JSON.stringify(errRun) + "\n");
+    process.exit(1);
+  }, HARD_TIMEOUT_MS);
 
   try {
     browser = await chromium.launch({
@@ -41,11 +66,38 @@ async function runScan(targetUrl) {
       args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
     });
 
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+      acceptDownloads: false
+    });
     const page = await context.newPage();
 
+    page.on("popup", (p) => p.close().catch(() => {}));
+
+    let targetOrigin = "";
+    try {
+      targetOrigin = new URL(targetUrl).origin;
+    } catch {}
+
+    await page.route("**/*", (route) => {
+      try {
+        const reqUrl = new URL(route.request().url());
+        if (
+          !targetOrigin ||
+          reqUrl.origin === targetOrigin ||
+          reqUrl.protocol === "data:" ||
+          reqUrl.protocol === "blob:"
+        ) {
+          route.continue();
+        } else {
+          route.abort();
+        }
+      } catch {
+        route.abort();
+      }
+    });
+
     // Navigate to local target with timeout
-    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
     try {
       await page.waitForLoadState("networkidle", { timeout: 5000 });
     } catch {}
@@ -117,6 +169,7 @@ async function runScan(targetUrl) {
 
     process.stdout.write(JSON.stringify(auditRun) + "\n");
   } catch (error) {
+    if (timedOut) return;
     const durationMs = Date.now() - new Date(startTime).getTime();
     const errRun = {
       id: `run-err-${Date.now()}`,
@@ -132,6 +185,7 @@ async function runScan(targetUrl) {
     };
     process.stdout.write(JSON.stringify(errRun) + "\n");
   } finally {
+    clearTimeout(timer);
     if (browser) {
       await browser.close().catch(() => {});
     }

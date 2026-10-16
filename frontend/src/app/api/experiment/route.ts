@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { getStorageDir, getRemediationState } from "@/lib/remediation-engine";
+import { rateLimit } from "@/lib/security";
 import type { AuditRun, JourneyRun, Issue } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 /**
  * AccessAble AI — Read-Only Remediation Experiment & Verification Comparison API
@@ -44,7 +47,12 @@ interface ExperimentComparison {
   message?: string;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rl = rateLimit(request, "experiment", 10, 60_000);
+  if (!rl.allowed) {
+    return rl.response!;
+  }
+
   const storageDir = getStorageDir();
   const auditFile = join(storageDir, ".latest-audit.json");
   const journeyFile = join(storageDir, ".latest-journey.json");

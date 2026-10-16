@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRemediationStore } from "@/lib/remediation-store";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -8,6 +8,90 @@ import { StatusPill } from "@/components/ui/StatusPill";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { FixReceipt } from "@/types";
+
+function ReceiptSignatureBadge({ receipt }: { receipt: FixReceipt }) {
+  const [status, setStatus] = useState<"loading" | "valid" | "invalid" | "unsigned">("loading");
+  const [reason, setReason] = useState<string>("");
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function check() {
+      try {
+        const res = await fetch("/api/receipts/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ receipt })
+        });
+        const data = await res.json();
+        if (isCancelled) return;
+        if (data.valid && data.status === "signed") {
+          setStatus("valid");
+        } else if (data.status === "unsigned") {
+          setStatus("unsigned");
+        } else {
+          setStatus("invalid");
+          setReason(data.reason || "Invalid signature");
+        }
+      } catch {
+        if (!isCancelled) {
+          setStatus("invalid");
+          setReason("Verification request failed");
+        }
+      }
+    }
+    check();
+    return () => {
+      isCancelled = true;
+    };
+  }, [receipt]);
+
+  if (status === "loading") {
+    return (
+      <span className="text-[11px] font-semibold bg-neutral-100 border border-neutral-200 text-neutral-500 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-pulse" />
+        Verifying signature...
+      </span>
+    );
+  }
+
+  if (status === "valid") {
+    return (
+      <span
+        className="text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"
+        title="HMAC-SHA256 signature verified"
+      >
+        <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        Signature valid
+      </span>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <span
+        className="text-[11px] font-semibold bg-rose-50 border border-rose-200 text-rose-800 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"
+        title={reason || "Signature mismatch"}
+      >
+        <svg className="w-3 h-3 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Signature invalid
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="text-[11px] font-semibold bg-neutral-100 border border-neutral-300 text-neutral-600 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"
+      title="No HMAC signature present"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+      Unsigned
+    </span>
+  );
+}
 
 export default function VerificationReportsPage() {
   const {
@@ -131,6 +215,7 @@ export default function VerificationReportsPage() {
                   <span className="text-[11px] font-semibold bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369A1] px-2.5 py-0.5 rounded-full">
                     {latestReceipt.engine === "full" ? "Engine: Full browser" : "Engine: Lightweight hosted scan"}
                   </span>
+                  <ReceiptSignatureBadge receipt={latestReceipt} />
                 </div>
                 <h2 className="text-xl font-bold text-neutral-950">
                   Fix Receipt ID: {latestReceipt.receiptId}

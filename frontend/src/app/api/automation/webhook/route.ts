@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { join } from "node:path";
+import { z } from "zod";
 import { getRemediationState } from "@/lib/remediation-engine";
+import { executeAuditScan, executeJourneyScan } from "@/lib/scan-engine";
+import { requireApiKey, validateTargetUrl } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 const DEMO_PATH = "/demo";
-const TIMEOUT_MS = 60_000;
+
+const WebhookSchema = z.object({
+  action: z.string().optional(),
+  event: z.string().optional(),
+  targetUrl: z.string().optional(),
+});
 
 function resolveDemoUrl(request: NextRequest): string {
   const host = request.headers.get("host") || "localhost:3000";
@@ -21,31 +28,16 @@ function resolveInternalScanUrl(): string {
   return `http://127.0.0.1:${port}${DEMO_PATH}`;
 }
 
-function verifyWebhookSecret(request: NextRequest): boolean {
-  const expectedSecret = process.env.N8N_WEBHOOK_SECRET;
-  if (!expectedSecret) {
-    // If no secret configured in environment, allow local test triggers
-    return true;
+export async function GET(request: NextRequest) {
+  const auth = requireApiKey(request);
+  if (!auth.valid) {
+    return auth.response!;
   }
 
-  const customHeader = request.headers.get("x-n8n-secret");
-  const authHeader = request.headers.get("authorization");
-
-  if (customHeader === expectedSecret) return true;
-  if (authHeader === `Bearer ${expectedSecret}`) return true;
-
-  return false;
-}
-
-export async function GET() {
-  const isSecretConfigured = Boolean(process.env.N8N_WEBHOOK_SECRET);
-  const webhookUrl = process.env.N8N_WEBHOOK_URL || null;
   const state = getRemediationState();
-
   return NextResponse.json({
     status: "ready",
-    webhookConfigured: isSecretConfigured,
-    externalWebhookUrl: webhookUrl,
+    webhookConfigured: true,
     activePatchesCount: state.activePatches.length,
     activePatches: state.activePatches,
     supportedActions: ["audit", "journey", "test", "status"],
@@ -55,32 +47,56 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = requireApiKey(request);
+  if (!auth.valid) {
+    return auth.response!;
+  }
+
   const executionId = `exec_n8n_${Date.now()}`;
   const timestamp = new Date().toISOString();
 
-  // 1. Verify Secret
-  if (!verifyWebhookSecret(request)) {
+  let rawJson: unknown = {};
+  try {
+    rawJson = await request.json();
+  } catch {
+    rawJson = {};
+  }
+
+  const parseResult = WebhookSchema.safeParse(rawJson);
+  if (!parseResult.success) {
     return NextResponse.json(
       {
         executionId,
         timestamp,
-        status: "unauthorized",
-        error: "Unauthorized: Invalid or missing webhook secret (x-n8n-secret header required).",
+        code: "INVALID_PAYLOAD",
+        message: "Malformed automation webhook payload.",
+        retryable: false,
       },
-      { status: 401 }
+      { status: 400 }
     );
   }
 
-  // 2. Parse payload
-  let body: { action?: string; event?: string; targetUrl?: string } = {};
-  try {
-    body = await request.json();
-  } catch {
-    body = {};
-  }
-
+  const body = parseResult.data;
   const action = (body.action || body.event || "test").toLowerCase();
   const demoUrl = resolveDemoUrl(request);
+  const internalScanUrl = resolveInternalScanUrl();
+
+  if (body.targetUrl) {
+    const clientHost = request.headers.get("host") || "localhost:3000";
+    const targetValidation = validateTargetUrl(body.targetUrl, clientHost);
+    if (!targetValidation.valid) {
+      return NextResponse.json(
+        {
+          executionId,
+          timestamp,
+          code: "FORBIDDEN_TARGET",
+          message: targetValidation.error || "Invalid targetUrl for automation.",
+          retryable: false,
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   if (action === "test" || action === "ping") {
     return NextResponse.json({
@@ -105,56 +121,23 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "audit" || action === "scan") {
-    const { spawn } = await import("node:child_process");
-    const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
-    const internalScanUrl = resolveInternalScanUrl();
-
     try {
-      const rawScanResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
-        const child = spawn("sh", ["-c", `node "${scriptPath}" "${internalScanUrl}"`], {
-          cwd: process.cwd(),
-          env: { ...process.env, TARGET_URL: internalScanUrl },
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => {
-          try { child.kill("SIGTERM"); } catch {}
-          reject(new Error("Axe scan timed out"));
-        }, TIMEOUT_MS);
-
-        child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-        child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-
-        child.on("exit", (code) => {
-          clearTimeout(timer);
-          try {
-            resolve(JSON.parse(stdout.trim()));
-          } catch {
-            reject(new Error(stderr || `Process exited with code ${code}`));
-          }
-        });
-      });
-
+      const scanResult = await executeAuditScan(demoUrl, internalScanUrl);
       return NextResponse.json({
         executionId,
         timestamp,
-        status: "completed",
+        status: scanResult.status === "error" ? "failed" : "completed",
         action: "audit",
-        result: {
-          ...rawScanResult,
-          target: demoUrl,
-        },
+        result: scanResult,
       });
     } catch (err) {
       return NextResponse.json(
         {
           executionId,
           timestamp,
-          status: "failed",
-          action: "audit",
-          error: err instanceof Error ? err.message : "Audit failed",
+          code: "AUTOMATION_AUDIT_ERROR",
+          message: "Automated audit execution failed.",
+          retryable: true,
         },
         { status: 500 }
       );
@@ -162,56 +145,23 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "journey") {
-    const { spawn } = await import("node:child_process");
-    const scriptPath = join(process.cwd(), "scripts", "journey-runner.mjs");
-    const internalScanUrl = resolveInternalScanUrl();
-
     try {
-      const rawJourneyResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
-        const child = spawn("sh", ["-c", `node "${scriptPath}" "${internalScanUrl}"`], {
-          cwd: process.cwd(),
-          env: { ...process.env, TARGET_URL: internalScanUrl },
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => {
-          try { child.kill("SIGTERM"); } catch {}
-          reject(new Error("Journey test timed out"));
-        }, TIMEOUT_MS);
-
-        child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-        child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-
-        child.on("exit", (code) => {
-          clearTimeout(timer);
-          try {
-            resolve(JSON.parse(stdout.trim()));
-          } catch {
-            reject(new Error(stderr || `Process exited with code ${code}`));
-          }
-        });
-      });
-
+      const journeyResult = await executeJourneyScan(demoUrl, internalScanUrl);
       return NextResponse.json({
         executionId,
         timestamp,
-        status: "completed",
+        status: journeyResult.status === "error" ? "failed" : "completed",
         action: "journey",
-        result: {
-          ...rawJourneyResult,
-          target: demoUrl,
-        },
+        result: journeyResult,
       });
     } catch (err) {
       return NextResponse.json(
         {
           executionId,
           timestamp,
-          status: "failed",
-          action: "journey",
-          error: err instanceof Error ? err.message : "Journey failed",
+          code: "AUTOMATION_JOURNEY_ERROR",
+          message: "Automated journey execution failed.",
+          retryable: true,
         },
         { status: 500 }
       );
@@ -222,8 +172,9 @@ export async function POST(request: NextRequest) {
     {
       executionId,
       timestamp,
-      status: "rejected",
-      error: `Unknown action '${action}'. Supported actions: 'test', 'audit', 'journey', 'status'.`,
+      code: "UNKNOWN_ACTION",
+      message: `Unknown action "${action}". Supported: test, audit, journey, status.`,
+      retryable: false,
     },
     { status: 400 }
   );

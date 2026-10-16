@@ -209,6 +209,9 @@ export interface FixReceipt {
   rollbackToken: string;
   finalStatus: "verified_resolved" | "verification_failed" | "rolled_back";
   knownLimitations: string[];
+  signature?: string;
+  signatureAlgorithm?: string;
+  signatureStatus?: "signed" | "unsigned" | "invalid";
 }
 
 export interface RemediationSnapshot {
