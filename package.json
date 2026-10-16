@@ -1,0 +1,11 @@
+{
+  "name": "accessable-ai-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run --prefix frontend build",
+    "start": "npm run --prefix frontend start",
+    "dev": "npm run --prefix frontend dev",
+    "test": "npm run --prefix frontend test"
+  }
+}
