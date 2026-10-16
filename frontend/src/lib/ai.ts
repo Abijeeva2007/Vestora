@@ -120,7 +120,7 @@ async function callAnthropicMessages(userPrompt: string): Promise<string> {
     throw new Error("Anthropic API responded with status " + res.status);
   }
 
-  const data = (await res.json());
+  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
   const text = data.content?.find((c) => c.type === "text")?.text;
   if (!text) {
     throw new Error("No text returned by Anthropic model");

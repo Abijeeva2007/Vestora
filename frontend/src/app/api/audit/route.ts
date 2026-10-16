@@ -104,15 +104,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const validation = AuditRequestSchema.safeParse(body);
-    if (!validation.success) {
-      const firstIssue = validation.error.issues[0];
-      const field = firstIssue?.path[0] || "payload";
+    // Validate supported fields
+    const allowedKeys = ["targetUrl"];
+    for (const key of Object.keys(body)) {
+      if (!allowedKeys.includes(key)) {
+        return NextResponse.json(
+          {
+            code: "INVALID_REQUEST",
+            message: `Invalid payload: unsupported field '${key}'.`,
+            error: `Invalid payload: unsupported field '${key}'.`,
+            retryable: false,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (body.targetUrl !== undefined && typeof body.targetUrl !== "string") {
       return NextResponse.json(
         {
           code: "INVALID_REQUEST",
-          message: `Invalid payload: unsupported field '${String(field)}'.`,
-          error: `Invalid payload: unsupported field '${String(field)}'.`,
+          message: "Invalid payload: targetUrl must be a string.",
+          error: "Invalid payload: targetUrl must be a string.",
+          retryable: false,
+        },
+        { status: 400 }
+      );
+    }
+
+    const validation = AuditRequestSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          code: "INVALID_REQUEST",
+          message: "Invalid request payload.",
+          error: "Invalid request payload.",
           retryable: false,
         },
         { status: 400 }

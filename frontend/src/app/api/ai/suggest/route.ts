@@ -58,10 +58,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const originCheck = sameOriginOnly(req);
-  if (originCheck) return originCheck;
+  if (!originCheck.valid && originCheck.response) return originCheck.response;
 
   const rateCheck = rateLimit(req, "ai-suggest", 30, 60000);
-  if (rateCheck) return rateCheck;
+  if (!rateCheck.allowed && rateCheck.response) return rateCheck.response;
 
   let body: unknown;
   try {
