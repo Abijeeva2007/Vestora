@@ -55,7 +55,7 @@ export default function AuditsPage() {
             type="button"
             onClick={runAudit}
             disabled={isRunning}
-            className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0 shadow-xs flex items-center justify-center gap-2"
+            className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0 shadow-xs flex items-center justify-center gap-2"
           >
             {isRunning ? (
               <>
@@ -96,9 +96,12 @@ export default function AuditsPage() {
           <div className="p-6 sm:p-8 rounded-[24px] bg-white border border-neutral-200 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5 mb-6">
               <div>
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h2 className="text-lg font-bold text-neutral-950">Latest Audit Run Summary</h2>
                   <StatusPill status="pass" label="Verified Run" />
+                  <span className="text-[11px] font-semibold bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369A1] px-2.5 py-0.5 rounded-full">
+                    {currentRun.engine === "full" ? "Engine: Full browser" : "Engine: Lightweight hosted scan"}
+                  </span>
                 </div>
                 <p className="text-xs text-neutral-500">
                   Run ID: <span className="font-mono">{currentRun.id}</span> • Completed: {new Date(currentRun.timestamp).toLocaleTimeString()}

@@ -342,7 +342,7 @@ async function runJourneys(targetUrl) {
     const task2 = {
       id: "task-form-journey",
       title: "Scholarship Application Flow",
-      persona: "Screen Reader / Keyboard Applicant",
+      persona: "Keyboard and form-label check (simulated)",
       condition: "Standard Form Journey",
       status: formTaskStatus,
       tabPresses: formTabCount,

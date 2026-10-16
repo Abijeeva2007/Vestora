@@ -10,8 +10,8 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AccessAble AI — Autonomous Accessibility Remediation Pipeline",
-  description: "Next-generation accessibility scanner, visual journey recorder, and verified remediation engine powered by Playwright and axe-core.",
+  title: "AccessAble AI — Approval-based accessibility remediation and verification",
+  description: "Accessibility scanner, visual journey recorder, and verified remediation engine.",
   icons: {
     icon: "/favicon.ico",
   },

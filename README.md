@@ -46,7 +46,7 @@ Existing automated accessibility tools (linters, static analyzers, and superfici
 
 - **Dual-Engine Verification Architecture:**
   - *Automated Rule Engine:* Fast headless Chromium + `axe-core 4.13.0` sweep detecting WCAG 2.1 AA violations in under 1 second.
-  - *Simulated User Journey Engine:* Playwright tests multi-step tasks across distinct assistive personas (Keyboard-Only Scholar, Screen Reader / Keyboard Applicant, and 320px Low-Vision Reflow).
+  - *Simulated User Journey Engine:* Playwright tests multi-step tasks across distinct assistive personas (Keyboard-Only Scholar, Keyboard and form-label check (simulated), and 320px Low-Vision Reflow).
 - **User Task Impact Matrix:**
   - Correlates syntactic rule violations with measured journey task failures.
   - Categorizes findings into **Task Blockers** (halts user task completion), **Visual Barriers** (contrast/scaling hurdles), and **Structural Enhancements**.

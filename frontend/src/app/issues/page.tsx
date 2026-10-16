@@ -149,7 +149,7 @@ export default function IssueExplorerPage() {
           <code className="text-xs font-mono font-semibold text-neutral-900 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full block w-fit mb-1">
             {issue.rule}
           </code>
-          <span className="text-xs font-medium text-neutral-950 line-clamp-1">
+          <span className="text-xs font-medium text-neutral-950 line-clamp-2">
             {issue.description}
           </span>
           {issue.inferredFromJourney && (
@@ -167,7 +167,7 @@ export default function IssueExplorerPage() {
         const firstEl = issue.affectedElements[0];
         return (
           <div>
-            <code className="text-xs font-mono text-neutral-900 block truncate max-w-xs font-semibold">
+            <code className="text-xs font-mono text-neutral-900 block break-all line-clamp-2 font-semibold">
               {firstEl?.selectors.join(", ") || "element"}
             </code>
             {issue.affectedElements.length > 1 && (
@@ -188,7 +188,7 @@ export default function IssueExplorerPage() {
             {issue.userImpact}
           </p>
           {issue.measuredTaskImpactReason && (
-            <p className="text-[11px] text-neutral-900 font-medium line-clamp-1">
+            <p className="text-[11px] text-neutral-900 font-medium line-clamp-2">
               Observed: {issue.measuredTaskImpactReason}
             </p>
           )}
@@ -213,7 +213,7 @@ export default function IssueExplorerPage() {
             e.stopPropagation();
             setSelectedIssue(issue);
           }}
-          className="px-3 py-1 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+          className="px-3 py-1 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
         >
           View Details
         </button>
@@ -240,7 +240,7 @@ export default function IssueExplorerPage() {
             <button
               type="button"
               onClick={runAudit}
-              className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+              className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
             >
               Run Audit Now
             </button>
@@ -282,7 +282,7 @@ export default function IssueExplorerPage() {
                   onClick={() => setOrderMode("rule")}
                   className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
                     orderMode === "rule"
-                      ? "bg-neutral-950 text-white shadow-xs"
+                      ? "bg-[#0369A1] text-white shadow-xs"
                       : "text-neutral-600 hover:text-neutral-950"
                   }`}
                 >
@@ -293,7 +293,7 @@ export default function IssueExplorerPage() {
                   onClick={() => setOrderMode("measured")}
                   className={`px-3 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
                     orderMode === "measured"
-                      ? "bg-neutral-950 text-white shadow-xs"
+                      ? "bg-[#0369A1] text-white shadow-xs"
                       : "text-neutral-600 hover:text-neutral-950"
                   }`}
                 >

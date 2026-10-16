@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import type { AuditRun } from "@/types";
 import { getStorageDir } from "@/lib/remediation-engine";
-import { runServerlessAudit } from "@/lib/serverless-scanner";
+import { executeAuditScan } from "@/lib/scan-engine";
 
 const DEMO_PATH = "/demo";
 const SCAN_TIMEOUT_MS = 60_000;
@@ -105,36 +105,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Run scanner (serverless resilient)
-    let rawAuditRun: AuditRun;
-    if (process.env.VERCEL) {
-      rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
-    } else {
-      try {
-        const internalScanUrl = resolveInternalScanUrl();
-        rawAuditRun = await runScannerProcess(internalScanUrl);
-        if (
-          rawAuditRun.status === "error" &&
-          (rawAuditRun.errorMessage?.includes("ERR_MODULE_NOT_FOUND") ||
-            rawAuditRun.errorMessage?.includes("browserType.launch") ||
-            rawAuditRun.errorMessage?.includes("playwright"))
-        ) {
-          rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
-        }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("Playwright runner unavailable, falling back to serverless scanner:", msg);
-        rawAuditRun = await runServerlessAudit(resolvedDemoUrl);
-      }
-    }
-
-    const auditRun: AuditRun = {
-      ...rawAuditRun,
-      target: resolvedDemoUrl,
-    };
+    // Run scanner via unified engine
+    const internalScanUrl = resolveInternalScanUrl();
+    const auditRun = await executeAuditScan(resolvedDemoUrl, internalScanUrl);
 
     if (auditRun.status === "error") {
-      return NextResponse.json(auditRun, { status: 500 });
+      return NextResponse.json({
+        code: "AUDIT_SCAN_ERROR",
+        message: "The accessibility scan could not be completed. Please retry.",
+        retryable: true,
+      }, { status: 500 });
     }
 
     // Persist run
@@ -145,87 +125,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(auditRun);
   } catch (error) {
-    const rawMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
-    const safeErrorMessage =
-      rawMessage.includes("ERR_") || rawMessage.includes("node:") || rawMessage.includes("/var/task") || rawMessage.includes("at ")
-        ? "An internal error occurred during audit execution."
-        : rawMessage;
+    console.error("Internal audit error:", error);
     return NextResponse.json(
       {
-        id: `run-err-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        target: resolveDemoUrl(request),
-        status: "error",
-        issueCounts: { critical: 0, serious: 0, moderate: 0, minor: 0, total: 0 },
-        issues: [],
-        errorMessage: safeErrorMessage,
+        code: "AUDIT_INTERNAL_ERROR",
+        message: "The accessibility audit encountered an issue while scanning. Please retry.",
+        retryable: true,
       },
       { status: 500 }
     );
   }
-}
-
-async function runScannerProcess(url: string): Promise<AuditRun> {
-  const { spawn } = await import("node:child_process");
-  const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
-
-  return new Promise((resolve, reject) => {
-    const child = spawn("sh", ["-c", `node "${scriptPath}" "${url}"`], {
-      cwd: process.cwd(),
-      env: { ...process.env, TARGET_URL: url },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let settled = false;
-
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      try {
-        child.kill("SIGTERM");
-      } catch {}
-      reject(new Error(`Scan timed out after ${SCAN_TIMEOUT_MS / 1000} seconds.`));
-    }, SCAN_TIMEOUT_MS);
-
-    child.stdout.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (err) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      reject(new Error(`Failed to start scanner process: ${err.message}`));
-    });
-
-    child.on("exit", (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-
-      try {
-        const trimmed = stdout.trim();
-        if (!trimmed) {
-          throw new Error(stderr || `Process exited with code ${code} without output.`);
-        }
-        const parsed = JSON.parse(trimmed) as AuditRun;
-        resolve(parsed);
-      } catch (err) {
-        reject(
-          new Error(
-            stderr ||
-              (err instanceof Error
-                ? err.message
-                : `Failed to parse scanner output: ${stdout.slice(0, 300)}`)
-          )
-        );
-      }
-    });
-  });
 }

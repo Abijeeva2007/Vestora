@@ -26,54 +26,54 @@ export default function OverviewPage() {
       {isRunning && <LoadingState message="Conducting real axe-core scan on the local demo page..." />}
       {error && !isRunning && <ErrorState message={error} onRetry={runAudit} />}
 
-      {/* Main Two-Column Hero & Bento Layout (Reference Style) */}
+      {/* Main Two-Column Hero & Bento Layout */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
         
-        {/* Left Column: Bento Stats + Large Headline + Description */}
+        {/* Left Column: Bento Stats + Headline + Description */}
         <div className="lg:col-span-7 flex flex-col justify-between space-y-8">
           
           {/* Top Bento Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            {/* Bento Card 1: Multi-tier Dark & Light Tile */}
-            <div className="bg-[#F4F5F7] p-2.5 rounded-[26px] flex flex-col gap-2 border border-neutral-200/60 shadow-xs">
-              {/* Dark Upper Tile */}
-              <div className="bg-[#0A0A0A] text-white p-4 rounded-[20px] flex items-center justify-between">
+            {/* Bento Card 1: Multi-tier Tile */}
+            <div className="bg-[#F0F9FF] p-2.5 rounded-[26px] flex flex-col gap-2 border border-[#BAE6FD] shadow-xs">
+              {/* Upper Tile */}
+              <div className="bg-[#0369A1] text-white p-4 rounded-[20px] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
                   <div>
                     <div className="text-xl font-bold tracking-tight">axe-core</div>
-                    <div className="text-[11px] text-neutral-400 leading-tight">Automated rule checks</div>
+                    <div className="text-[11px] text-sky-100 leading-tight">Automated rule checks</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-300">
+                <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-white/20 text-white">
                   Engine
                 </span>
               </div>
 
-              {/* Light Lower Tile */}
-              <div className="bg-[#E5E7EB] text-[#0A0A0A] p-3.5 px-4 rounded-[20px] flex items-center justify-between">
+              {/* Lower Tile */}
+              <div className="bg-white text-[#0F2A43] p-3.5 px-4 rounded-[20px] flex items-center justify-between border border-[#BAE6FD]">
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-1.5 overflow-hidden">
-                    <div className="w-5 h-5 rounded-full bg-neutral-900 border border-white" />
-                    <div className="w-5 h-5 rounded-full bg-neutral-500 border border-white" />
+                    <div className="w-5 h-5 rounded-full bg-[#0369A1] border border-white" />
+                    <div className="w-5 h-5 rounded-full bg-sky-300 border border-white" />
                   </div>
                   <div>
                     <span className="font-bold text-sm">
-                      {counts?.total ? `${counts.total} Barriers` : "4 Critical"}
+                      {counts?.total ? `${counts.total} Barriers` : "Run scan for count"}
                     </span>
-                    <span className="text-xs text-neutral-600 block leading-tight">
+                    <span className="text-xs text-[#475569] block leading-tight">
                       Detected in target
                     </span>
                   </div>
                 </div>
                 <Link
                   href="/issues"
-                  className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors shadow-xs"
+                  className="w-7 h-7 rounded-full bg-[#F0F9FF] border border-[#BAE6FD] flex items-center justify-center text-[#0369A1] hover:bg-[#0369A1] hover:text-white transition-colors shadow-xs"
                   aria-label="View issues"
                 >
                   →
@@ -82,32 +82,32 @@ export default function OverviewPage() {
             </div>
 
             {/* Bento Card 2: Interactive Demo Target */}
-            <div className="bg-[#F4F5F7] p-4 rounded-[26px] border border-neutral-200/60 flex flex-col justify-between shadow-xs">
+            <div className="bg-[#F0F9FF] p-4 rounded-[26px] border border-[#BAE6FD] flex flex-col justify-between shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="px-2.5 py-0.5 rounded-full bg-white border border-neutral-200 text-[11px] font-semibold text-neutral-800">
+                <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#BAE6FD] text-[11px] font-semibold text-[#0369A1]">
                   Live Target
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
 
               <div className="my-3">
-                <h2 className="text-base font-bold text-neutral-950 leading-tight">
+                <h2 className="text-base font-bold text-[#0F2A43] leading-tight">
                   Scholarship Demo
                 </h2>
-                <p className="text-xs text-neutral-500 mt-1 leading-snug">
-                  Controlled portal with active keyboard traps & contrast barriers
+                <p className="text-xs text-[#475569] mt-1 leading-snug">
+                  Controlled portal with active keyboard traps &amp; contrast barriers
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-neutral-200/70">
-                <span className="text-[11px] font-medium text-neutral-500">
-                  Playwright browser ready
+              <div className="flex items-center justify-between pt-2 border-t border-[#BAE6FD]/70">
+                <span className="text-[11px] font-medium text-[#475569]">
+                  Interactive route ready
                 </span>
                 <Link
                   href="/demo"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-xs"
+                  className="w-8 h-8 rounded-full bg-[#0369A1] text-white flex items-center justify-center hover:bg-[#0284C7] transition-colors shadow-xs"
                   aria-label="Open scholarship demo in new tab"
                 >
                   <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
@@ -119,33 +119,14 @@ export default function OverviewPage() {
 
           </div>
 
-          {/* Large Editorial Headline */}
+          {/* Large Headline */}
           <div className="space-y-4">
-            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-neutral-950 leading-[1.08] break-words">
-              Experience the power of{" "}
-              <span className="inline-flex flex-wrap items-center align-middle">
-                accessible digital{" "}
-                <Link
-                  href="/journeys"
-                  className="inline-flex items-center gap-1.5 mx-2 my-1 px-3.5 py-1.5 rounded-full bg-neutral-950 text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 transition-all shadow-xs"
-                >
-                  <span>Learn More</span>
-                  <span className="text-[11px]">↗</span>
-                </Link>
-              </span>
-              platforms
-              <span className="inline-flex items-center gap-1 ml-3 align-middle">
-                <span className="w-5 h-5 rounded-full bg-neutral-900 border-2 border-white inline-block" />
-                <span className="w-5 h-5 rounded-full bg-neutral-400 border-2 border-white -ml-2 inline-block" />
-                <span className="w-5 h-5 rounded-full bg-neutral-200 border-2 border-white -ml-2 inline-block" />
-              </span>
+            <h1 className="text-3xl sm:text-5xl lg:text-[46px] font-bold tracking-tight text-[#0F2A43] leading-[1.12] break-words">
+              Find the barriers that stop real people finishing a task, fix them with your approval, and prove it worked.
             </h1>
 
-            <p className="text-sm sm:text-base text-neutral-600 leading-relaxed max-w-2xl font-normal">
-              Discover a practical approach to accessibility with our integrated pipeline.
-              We pair automated axe-core rule evaluation with Playwright keyboard journey testing,
-              distinguish true task blockers from cosmetic issues, and produce verifiable,
-              reversible code patches with human-in-the-loop review.
+            <p className="text-sm sm:text-base text-[#475569] leading-relaxed max-w-2xl font-normal">
+              A practical approach to accessibility: pair automated axe-core rule evaluation with keyboard journey testing, distinguish true task blockers from visual barriers, and produce verifiable, reversible code patches with human sign-off.
             </p>
           </div>
 
@@ -155,7 +136,7 @@ export default function OverviewPage() {
               type="button"
               onClick={runAudit}
               disabled={isRunning}
-              className="px-6 py-3 rounded-full bg-neutral-950 text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 transition-all shadow-sm flex items-center gap-2.5 disabled:opacity-50"
+              className="px-6 py-3 rounded-full bg-[#0369A1] text-white text-xs sm:text-sm font-semibold hover:bg-[#0284C7] transition-all shadow-sm flex items-center gap-2.5 disabled:opacity-50"
             >
               {isRunning ? (
                 <>
@@ -175,7 +156,7 @@ export default function OverviewPage() {
 
             <Link
               href="/issues"
-              className="px-6 py-3 rounded-full bg-white border border-neutral-300 text-neutral-900 text-xs sm:text-sm font-semibold hover:bg-neutral-50 transition-colors shadow-xs flex items-center gap-1.5"
+              className="px-6 py-3 rounded-full bg-white border border-[#BAE6FD] text-[#0369A1] text-xs sm:text-sm font-semibold hover:bg-[#F0F9FF] transition-colors shadow-xs flex items-center gap-1.5"
             >
               <span>Explore All Issues</span>
               <span>→</span>
@@ -184,121 +165,90 @@ export default function OverviewPage() {
 
         </div>
 
-        {/* Right Column: Visual Product Preview & Interactive Overlay Card */}
+        {/* Right Column: Visual Product Preview & Real Run Hero Card */}
         <div className="lg:col-span-5 flex flex-col">
-          <div className="w-full h-full min-h-[460px] rounded-[30px] bg-[#F4F5F7] border border-neutral-200/80 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden shadow-xs">
+          <div className="w-full h-full min-h-[460px] rounded-[30px] bg-[#F0F9FF] border border-[#BAE6FD] p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden shadow-xs">
             
             {/* Top Visual Header */}
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-800">
-                  Visual Focus Map
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0F2A43]">
+                  Latest Real Run Evidence
                 </span>
-                <span className="text-[10px] bg-white border border-neutral-200 px-2 py-0.5 rounded-full font-semibold text-neutral-600">
-                  {previewMode === "barriers" ? "Active Barriers" : "Remediated"}
-                </span>
+                {currentRun && (
+                  <span className="text-[10px] bg-white border border-[#BAE6FD] px-2 py-0.5 rounded-full font-semibold text-[#0369A1]">
+                    {currentRun.engine === "full" ? "Full Browser" : "Lightweight Scan"}
+                  </span>
+                )}
               </div>
               <Link
                 href="/focus-map"
-                className="text-xs font-semibold text-neutral-900 hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-[#0369A1] hover:underline flex items-center gap-1"
               >
                 <span>Full Map</span>
                 <span>↗</span>
               </Link>
             </div>
 
-            {/* Interactive Graphic: Focus Traversal Map Representation */}
+            {/* Interactive Graphic: Focus Traversal Map Representation from Real Run */}
             <div className="my-6 relative flex-1 flex flex-col items-center justify-center p-4">
-              {/* Stylized Traversal Diagram */}
-              <div className="w-full max-w-sm space-y-3 font-mono text-xs">
-                
-                {/* Node 1 */}
-                <div className={`p-3 rounded-xl border transition-all ${
-                  previewMode === "barriers"
-                    ? "bg-rose-50/80 border-rose-300 text-rose-950"
-                    : "bg-white border-neutral-200 text-neutral-900"
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 font-bold">
-                      <span className="w-5 h-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px]">1</span>
-                      #bookmark-btn
-                    </span>
-                    <span className="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">
-                      {previewMode === "barriers" ? "button-name (Missing)" : "aria-label added"}
-                    </span>
+              {currentRun && currentRun.issues && currentRun.issues.length > 0 ? (
+                <div className="w-full max-w-sm space-y-3 text-xs">
+                  {currentRun.issues.slice(0, 3).map((issue, idx) => (
+                    <div
+                      key={issue.id}
+                      className="p-3 rounded-xl border bg-white border-[#BAE6FD] text-[#0F2A43] shadow-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 font-bold truncate">
+                          <span className="w-5 h-5 rounded-full bg-[#0369A1] text-white flex items-center justify-center text-[10px] shrink-0 font-bold">
+                            {idx + 1}
+                          </span>
+                          <code className="text-[11px] truncate">{issue.affectedElements[0]?.selectors[0] || issue.rule}</code>
+                        </span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 border ${
+                          issue.severity === "critical"
+                            ? "bg-rose-50 text-rose-800 border-rose-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}>
+                          {issue.rule}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#475569] mt-1 line-clamp-1">{issue.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-6 bg-white/80 rounded-2xl border border-[#BAE6FD] max-w-xs space-y-2">
+                  <div className="w-8 h-8 mx-auto rounded-full bg-[#F0F9FF] text-[#0369A1] flex items-center justify-center text-sm font-bold border border-[#BAE6FD]">
+                    ◈
                   </div>
+                  <p className="text-xs font-bold text-[#0F2A43]">No Scan Run Yet</p>
+                  <p className="text-[11px] text-[#475569] leading-snug">
+                    Click &quot;Run Real axe-core Scan&quot; to inspect real stops and barriers from /demo.
+                  </p>
                 </div>
-
-                {/* Trajectory Connector */}
-                <div className="flex justify-center -my-1 text-neutral-400">
-                  ↓ Tab key (Traversal Step)
-                </div>
-
-                {/* Node 2 */}
-                <div className={`p-3 rounded-xl border transition-all ${
-                  previewMode === "barriers"
-                    ? "bg-rose-50/80 border-rose-300 text-rose-950"
-                    : "bg-white border-neutral-200 text-neutral-900"
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 font-bold">
-                      <span className="w-5 h-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px]">2</span>
-                      #national-id-input
-                    </span>
-                    <span className="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">
-                      {previewMode === "barriers" ? "label missing" : "label for linked"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Trajectory Connector */}
-                <div className="flex justify-center -my-1 text-neutral-400">
-                  ↓ Tab key (Traversal Step)
-                </div>
-
-                {/* Node 3 */}
-                <div className={`p-3 rounded-xl border transition-all ${
-                  previewMode === "barriers"
-                    ? "bg-amber-50/80 border-amber-300 text-amber-950"
-                    : "bg-white border-neutral-200 text-neutral-900"
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 font-bold">
-                      <span className="w-5 h-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px]">3</span>
-                      #submit-app-btn
-                    </span>
-                    <span className="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
-                      {previewMode === "barriers" ? "2.1:1 Contrast" : "4.8:1 WCAG AA"}
-                    </span>
-                  </div>
-                </div>
-
-              </div>
+              )}
             </div>
 
-            {/* Bottom Overlay Card (Faithful to Reference "join our platform" card) */}
-            <div className="bg-[#0A0A0A] text-white p-4 rounded-[22px] flex items-center justify-between shadow-md relative z-10">
+            {/* Bottom Overlay Card */}
+            <div className="bg-[#0F2A43] text-white p-4 rounded-[22px] flex items-center justify-between shadow-md relative z-10">
               <div>
                 <p className="text-xs font-bold leading-tight tracking-tight">
-                  verify your journey
+                  Approval-Based Remediation
                 </p>
-                <p className="text-[11px] text-neutral-400 leading-tight">
-                  & start safe remediation
+                <p className="text-[11px] text-sky-200 leading-tight">
+                  Inspect diffs before applying
                 </p>
               </div>
 
-              {/* Interactive Mode Toggle Pill */}
-              <button
-                type="button"
-                onClick={() => setPreviewMode(previewMode === "barriers" ? "remediated" : "barriers")}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 px-3 py-1.5 rounded-full transition-colors text-xs font-semibold"
-                aria-label={`Toggle preview: currently ${previewMode}`}
+              <Link
+                href="/fix-review"
+                className="flex items-center gap-2 bg-[#0369A1] hover:bg-[#0284C7] px-3.5 py-1.5 rounded-full transition-colors text-xs font-semibold text-white shadow-xs"
               >
-                <span>{previewMode === "barriers" ? "Show Patched" : "Show Raw"}</span>
-                <div className="w-5 h-5 rounded-full bg-white text-neutral-900 flex items-center justify-center text-[11px]">
-                  {previewMode === "barriers" ? "⇄" : "✓"}
-                </div>
-              </button>
+                <span>Fix Review</span>
+                <span>→</span>
+              </Link>
             </div>
 
           </div>
@@ -306,11 +256,11 @@ export default function OverviewPage() {
 
       </section>
 
-      {/* Category Pills Bar (Matching Reference bottom pill row) */}
+      {/* Category Pills Bar */}
       <section className="flex flex-wrap items-center gap-2.5 pt-2" aria-label="Feature shortcuts">
         <Link
           href="/audits"
-          className="px-4 py-2 rounded-full bg-[#F4F5F7] hover:bg-neutral-200/80 text-neutral-800 text-xs font-semibold transition-colors flex items-center gap-2 border border-neutral-200/60"
+          className="px-4 py-2 rounded-full bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-[#0F2A43] text-xs font-semibold transition-colors flex items-center gap-2 border border-[#BAE6FD]"
         >
           <span>⊞</span>
           <span>axe-core Scanner</span>
@@ -318,7 +268,7 @@ export default function OverviewPage() {
 
         <Link
           href="/journeys"
-          className="px-4 py-2 rounded-full bg-[#F4F5F7] hover:bg-neutral-200/80 text-neutral-800 text-xs font-semibold transition-colors flex items-center gap-2 border border-neutral-200/60"
+          className="px-4 py-2 rounded-full bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-[#0F2A43] text-xs font-semibold transition-colors flex items-center gap-2 border border-[#BAE6FD]"
         >
           <span>⇄</span>
           <span>Journey Testing</span>
@@ -326,15 +276,15 @@ export default function OverviewPage() {
 
         <Link
           href="/focus-map"
-          className="px-4 py-2 rounded-full bg-[#F4F5F7] hover:bg-neutral-200/80 text-neutral-800 text-xs font-semibold transition-colors flex items-center gap-2 border border-neutral-200/60"
+          className="px-4 py-2 rounded-full bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-[#0F2A43] text-xs font-semibold transition-colors flex items-center gap-2 border border-[#BAE6FD]"
         >
           <span>◈</span>
-          <span>Visual Focus Map</span>
+          <span>Visual Tab-Order Map</span>
         </Link>
 
         <Link
           href="/fix-review"
-          className="px-4 py-2 rounded-full bg-[#F4F5F7] hover:bg-neutral-200/80 text-neutral-800 text-xs font-semibold transition-colors flex items-center gap-2 border border-neutral-200/60"
+          className="px-4 py-2 rounded-full bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-[#0F2A43] text-xs font-semibold transition-colors flex items-center gap-2 border border-[#BAE6FD]"
         >
           <span>☵</span>
           <span>Safe Remediation</span>
@@ -342,83 +292,95 @@ export default function OverviewPage() {
 
         <Link
           href="/verification"
-          className="px-4 py-2 rounded-full bg-[#F4F5F7] hover:bg-neutral-200/80 text-neutral-800 text-xs font-semibold transition-colors flex items-center gap-2 border border-neutral-200/60"
+          className="px-4 py-2 rounded-full bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-[#0F2A43] text-xs font-semibold transition-colors flex items-center gap-2 border border-[#BAE6FD]"
         >
           <span>⬡</span>
-          <span>Verification Receipts</span>
+          <span>Fix Receipts</span>
         </Link>
       </section>
 
-      {/* Live Metrics Bento Grid */}
+      {/* Live Metrics Grid with Accent Strips & Icons */}
       <section className="space-y-4 pt-4" aria-label="Live System Metrics">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-neutral-950">
+          <h2 className="text-xl font-bold tracking-tight text-[#0F2A43]">
             System Intelligence
           </h2>
-          <span className="text-xs text-neutral-500 font-medium">
-            Live Target: <code className="text-neutral-900 font-mono">/demo</code>
+          <span className="text-xs text-[#475569] font-medium">
+            Live Target: <code className="text-[#0F2A43] font-mono">/demo</code>
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card 1: Total Issues */}
-          <div className="p-6 rounded-[22px] bg-[#F4F5F7] border border-neutral-200/70 flex flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Total Issues Detected
-            </span>
+          <div className="p-6 rounded-[22px] bg-white border border-[#BAE6FD] border-l-4 border-l-[#0369A1] flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#475569]">
+                Total Issues Detected
+              </span>
+              <span className="text-sm text-[#0369A1]">●</span>
+            </div>
             <div className="my-3">
-              <span className="text-4xl font-extrabold text-neutral-950 tracking-tight">
-                {counts?.total ?? 4}
+              <span className="text-4xl font-extrabold text-[#0F2A43] tracking-tight">
+                {counts ? counts.total : "—"}
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
-              Verified by axe-core rule evaluation
+            <p className="text-xs text-[#475569]">
+              {counts ? "Measured by automated rule evaluation" : "Click 'Run Real axe-core Scan'"}
             </p>
           </div>
 
-          {/* Card 2: Critical Task Blockers */}
-          <div className="p-6 rounded-[22px] bg-[#F4F5F7] border border-neutral-200/70 flex flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Critical & High Barriers
-            </span>
+          {/* Card 2: Critical & High */}
+          <div className="p-6 rounded-[22px] bg-white border border-[#BAE6FD] border-l-4 border-l-rose-500 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#475569]">
+                Critical &amp; High Barriers
+              </span>
+              <span className="text-sm text-rose-500">▲</span>
+            </div>
             <div className="my-3">
               <span className="text-4xl font-extrabold text-rose-600 tracking-tight">
-                {criticalAndHigh || 3}
+                {counts ? criticalAndHigh : "—"}
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
-              {counts?.critical ?? 1} critical, {counts?.serious ?? 2} serious
+            <p className="text-xs text-[#475569]">
+              {counts ? `${counts.critical} critical, ${counts.serious} serious` : "Awaiting scan"}
             </p>
           </div>
 
           {/* Card 3: Safe Remediation Patches */}
-          <div className="p-6 rounded-[22px] bg-[#F4F5F7] border border-neutral-200/70 flex flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Safe Code Patches
-            </span>
+          <div className="p-6 rounded-[22px] bg-white border border-[#BAE6FD] border-l-4 border-l-emerald-500 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#475569]">
+                Supported Code Patches
+              </span>
+              <span className="text-sm text-emerald-600">✓</span>
+            </div>
             <div className="my-3">
-              <span className="text-4xl font-extrabold text-neutral-950 tracking-tight">
+              <span className="text-4xl font-extrabold text-[#0F2A43] tracking-tight">
                 3 Supported
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-[#475569]">
               Pre-computed allowlisted diffs with safety gates
             </p>
           </div>
 
           {/* Card 4: Verification Scope */}
-          <div className="p-6 rounded-[22px] bg-[#F4F5F7] border border-neutral-200/70 flex flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Verification Scope
-            </span>
+          <div className="p-6 rounded-[22px] bg-white border border-[#BAE6FD] border-l-4 border-l-sky-400 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#475569]">
+                Verification Scope
+              </span>
+              <span className="text-sm text-sky-500">◈</span>
+            </div>
             <div className="my-3">
-              <span className="text-3xl font-extrabold text-neutral-950 tracking-tight">
+              <span className="text-2xl font-extrabold text-[#0F2A43] tracking-tight">
                 Tested Journeys
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
-              Evidence-based; human review required for full WCAG
+            <p className="text-xs text-[#475569]">
+              Automated checks do not guarantee WCAG compliance
             </p>
           </div>
 
@@ -426,48 +388,48 @@ export default function OverviewPage() {
       </section>
 
       {/* Continuous Accessibility Workflow Pipeline */}
-      <section className="p-7 rounded-[26px] bg-[#F4F5F7] border border-neutral-200/70 space-y-5">
+      <section className="p-7 rounded-[26px] bg-[#F0F9FF] border border-[#BAE6FD] space-y-5">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0369A1]">
             Pipeline Architecture
           </span>
-          <h2 className="text-lg font-bold text-neutral-950 mt-1">
-            Deterministic Remediation Lifecycle
+          <h2 className="text-lg font-bold text-[#0F2A43] mt-1">
+            Approval-Based Remediation Lifecycle
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
-          <div className="p-4 rounded-xl bg-white border border-neutral-200/80">
-            <div className="font-bold text-neutral-950 mb-1">1. DETECT</div>
-            <p className="text-neutral-500 leading-relaxed text-[11px]">
+          <div className="p-4 rounded-xl bg-white border border-[#BAE6FD]">
+            <div className="font-bold text-[#0F2A43] mb-1">1. DETECT</div>
+            <p className="text-[#475569] leading-relaxed text-[11px]">
               Headless Chromium executes axe-core and monitors keyboard focus traps.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-neutral-200/80">
-            <div className="font-bold text-neutral-950 mb-1">2. PRIORITIZE</div>
-            <p className="text-neutral-500 leading-relaxed text-[11px]">
+          <div className="p-4 rounded-xl bg-white border border-[#BAE6FD]">
+            <div className="font-bold text-[#0F2A43] mb-1">2. PRIORITIZE</div>
+            <p className="text-[#475569] leading-relaxed text-[11px]">
               Distinguish true task blockers from cosmetic violations.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-neutral-200/80">
-            <div className="font-bold text-neutral-950 mb-1">3. REMEDIATE</div>
-            <p className="text-neutral-500 leading-relaxed text-[11px]">
+          <div className="p-4 rounded-xl bg-white border border-[#BAE6FD]">
+            <div className="font-bold text-[#0F2A43] mb-1">3. REMEDIATE</div>
+            <p className="text-[#475569] leading-relaxed text-[11px]">
               Generate precise AST-level patches targeting only verified broken attributes.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-neutral-200/80">
-            <div className="font-bold text-neutral-950 mb-1">4. VERIFY</div>
-            <p className="text-neutral-500 leading-relaxed text-[11px]">
-              Re-run Playwright journey tests to guarantee zero regressions.
+          <div className="p-4 rounded-xl bg-white border border-[#BAE6FD]">
+            <div className="font-bold text-[#0F2A43] mb-1">4. VERIFY</div>
+            <p className="text-[#475569] leading-relaxed text-[11px]">
+              Re-run journey tests to verify issues are resolved without regressions.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-neutral-200/80">
-            <div className="font-bold text-neutral-950 mb-1">5. MONITOR</div>
-            <p className="text-neutral-500 leading-relaxed text-[11px]">
+          <div className="p-4 rounded-xl bg-white border border-[#BAE6FD]">
+            <div className="font-bold text-[#0F2A43] mb-1">5. MONITOR</div>
+            <p className="text-[#475569] leading-relaxed text-[11px]">
               Continuous CI/CD gatekeeper blocking inaccessible deployments.
             </p>
           </div>
@@ -508,7 +470,7 @@ export default function OverviewPage() {
                 </div>
                 <Link
                   href="/fix-review"
-                  className="px-4 py-1.5 rounded-full border border-neutral-200 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-900 transition-colors shrink-0 text-center"
+                  className="px-4 py-1.5 rounded-full border border-[#BAE6FD] bg-[#F0F9FF] hover:bg-[#BAE6FD]/40 text-xs font-semibold text-[#0369A1] transition-colors shrink-0 text-center"
                 >
                   Inspect Patch
                 </Link>

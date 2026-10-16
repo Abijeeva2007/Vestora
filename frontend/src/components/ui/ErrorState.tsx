@@ -1,16 +1,20 @@
 interface ErrorStateProps {
   title?: string;
   message: string;
+  details?: string;
   retryLabel?: string;
   onRetry?: () => void;
 }
 
 export function ErrorState({
-  title = "Audit Failed",
+  title = "Operation Failed",
   message,
+  details,
   retryLabel = "Dismiss & Retry",
   onRetry,
 }: ErrorStateProps) {
+  const isDev = process.env.NODE_ENV !== "production";
+
   return (
     <div
       role="alert"
@@ -29,11 +33,16 @@ export function ErrorState({
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-rose-950">{title}</h3>
           <p className="text-sm text-neutral-700 mt-1 leading-relaxed">{message}</p>
+          {isDev && details && (
+            <div className="mt-3 p-3 bg-neutral-900 text-neutral-200 text-xs font-mono rounded-lg overflow-x-auto max-h-40">
+              {details}
+            </div>
+          )}
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-4 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+              className="mt-4 px-4 py-2 rounded-full bg-[#0369A1] text-white text-xs font-semibold hover:bg-[#0284C7] transition-colors shadow-xs"
             >
               {retryLabel}
             </button>

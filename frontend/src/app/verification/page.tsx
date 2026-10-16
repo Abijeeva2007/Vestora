@@ -61,9 +61,9 @@ export default function VerificationReportsPage() {
       </div>
 
       <PageHeader
-        eyebrow="CRYPTOGRAPHIC COMPLIANCE RECEIPTS"
+        eyebrow="FIX RECEIPTS"
         title="Verification Reports"
-        description="Inspect before-and-after audit comparisons, regression analyses, safety-gate audit trails, and export cryptographically verifiable JSON fix receipts."
+        description="Inspect before-and-after audit comparisons, regression analyses, safety-gate audit trails, and export checksummed JSON fix receipts. Automated checks do not guarantee complete WCAG compliance."
         action={
           <div className="flex items-center gap-3">
             <button
@@ -73,7 +73,7 @@ export default function VerificationReportsPage() {
               aria-disabled={!latestReceipt}
               className={`px-5 py-2.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 shadow-xs ${
                 latestReceipt
-                  ? "bg-neutral-950 text-white hover:bg-neutral-800 cursor-pointer"
+                  ? "bg-[#0369A1] text-white hover:bg-[#0284C7] cursor-pointer"
                   : "bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed"
               }`}
             >
@@ -97,12 +97,12 @@ export default function VerificationReportsPage() {
 
       {!latestReceipt ? (
         <EmptyState
-          title="No Verification Records Available"
-          description="Verification reports and downloadable JSON receipts are generated after reviewing and applying an allowlisted patch in Fix Review. No patches have been applied yet."
+          title="No verification yet"
+          description="No verification yet. Apply a fix, then run Verify."
           action={
             <Link
               href="/fix-review"
-              className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors inline-block shadow-xs"
+              className="px-6 py-2.5 rounded-full bg-[#0369A1] text-white text-xs font-semibold hover:bg-[#0284C7] transition-colors inline-block shadow-xs"
             >
               Go to Fix Review →
             </Link>
@@ -128,6 +128,9 @@ export default function VerificationReportsPage() {
                   <span className="text-xs font-mono font-bold bg-neutral-100 border border-neutral-200 px-2.5 py-0.5 rounded-full text-neutral-900">
                     {latestReceipt.rule}
                   </span>
+                  <span className="text-[11px] font-semibold bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369A1] px-2.5 py-0.5 rounded-full">
+                    {latestReceipt.engine === "full" ? "Engine: Full browser" : "Engine: Lightweight hosted scan"}
+                  </span>
                 </div>
                 <h2 className="text-xl font-bold text-neutral-950">
                   Fix Receipt ID: {latestReceipt.receiptId}
@@ -150,7 +153,7 @@ export default function VerificationReportsPage() {
                 <button
                   type="button"
                   onClick={handleExportJson}
-                  className="px-5 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+                  className="px-5 py-2 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
                 >
                   Download Receipt (.json)
                 </button>
@@ -184,7 +187,7 @@ export default function VerificationReportsPage() {
                   </h3>
                 </div>
                 <p className="text-xs text-neutral-500">
-                  Cryptographically documented sequence of events from initial detection through pre-commit verification and sign-off.
+                  Documented sequence of events from initial detection through pre-commit verification and sign-off.
                 </p>
               </div>
               <span className="text-[11px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-semibold">
@@ -296,7 +299,7 @@ export default function VerificationReportsPage() {
                 </span>
                 <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold">Cryptographic Fix Receipt Issued</span>
+                    <span className="font-bold">Fix Receipt Issued</span>
                     <span className="text-[10px] text-emerald-800 font-mono font-semibold">VERIFIED</span>
                   </div>
                   <p className="text-emerald-800">
@@ -430,7 +433,7 @@ export default function VerificationReportsPage() {
               tabIndex={0}
               role="region"
               aria-label="Applied unified diff"
-              className="p-4 bg-neutral-950 text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
+              className="p-4 bg-[#0F2A43] text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
             >
               {latestReceipt.appliedDiff}
             </pre>
@@ -441,7 +444,7 @@ export default function VerificationReportsPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-neutral-950">
-                  Cryptographic JSON Fix Receipt Payload
+                  JSON Fix Receipt Payload
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   Excludes secrets and sensitive values • Contains full before/after audit traces
@@ -450,7 +453,7 @@ export default function VerificationReportsPage() {
               <button
                 type="button"
                 onClick={handleExportJson}
-                className="px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+                className="px-4 py-2 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
               >
                 Export JSON
               </button>
@@ -458,7 +461,7 @@ export default function VerificationReportsPage() {
             <pre
               tabIndex={0}
               role="region"
-              aria-label="Cryptographic fix receipt JSON"
+              aria-label="Fix receipt JSON"
               className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-800 overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-900"
             >
               {JSON.stringify(latestReceipt, null, 2)}

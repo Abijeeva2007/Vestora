@@ -9,7 +9,7 @@ import {
   evaluateSafetyGate,
   SUPPORTED_FIXES,
 } from "@/lib/remediation-engine";
-import { runServerlessAudit, runServerlessJourney } from "@/lib/serverless-scanner";
+import { getEngine, executeAuditScan, executeJourneyScan } from "@/lib/scan-engine";
 import type {
   FixProposal,
   FixReceipt,
@@ -20,7 +20,6 @@ import type {
 export const dynamic = "force-dynamic";
 
 const DEMO_PATH = "/demo";
-const TIMEOUT_MS = 60_000;
 
 function resolveDemoUrl(request: NextRequest): string {
   const host = request.headers.get("host") || "localhost:3000";
@@ -36,100 +35,14 @@ function resolveInternalScanUrl(): string {
   return `http://127.0.0.1:${port}${DEMO_PATH}`;
 }
 
-async function runAxeScan(targetUrl: string): Promise<AuditRun> {
-  const { spawn } = await import("node:child_process");
-  const scriptPath = join(process.cwd(), "scripts", "axe-scan.mjs");
-
-  return new Promise((resolve, reject) => {
-    const child = spawn("sh", ["-c", `node "${scriptPath}" "${targetUrl}"`], {
-      cwd: process.cwd(),
-      env: { ...process.env, TARGET_URL: targetUrl },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => {
-      try { child.kill("SIGTERM"); } catch {}
-      reject(new Error("Scan timed out"));
-    }, TIMEOUT_MS);
-
-    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-
-    child.on("exit", () => {
-      clearTimeout(timer);
-      try {
-        resolve(JSON.parse(stdout.trim()) as AuditRun);
-      } catch (err) {
-        reject(new Error(stderr || "Axe scan parse failed"));
-      }
-    });
-  });
+async function performAuditScan(demoUrl: string, overridePatches?: string[]): Promise<AuditRun> {
+  const internalScanUrl = resolveInternalScanUrl();
+  return executeAuditScan(demoUrl, internalScanUrl, overridePatches);
 }
 
-async function runJourneyTest(targetUrl: string): Promise<JourneyRun> {
-  const { spawn } = await import("node:child_process");
-  const scriptPath = join(process.cwd(), "scripts", "journey-runner.mjs");
-
-  return new Promise((resolve, reject) => {
-    const child = spawn("sh", ["-c", `node "${scriptPath}" "${targetUrl}"`], {
-      cwd: process.cwd(),
-      env: { ...process.env, TARGET_URL: targetUrl },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => {
-      try { child.kill("SIGTERM"); } catch {}
-      reject(new Error("Journey test timed out"));
-    }, TIMEOUT_MS);
-
-    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-
-    child.on("exit", () => {
-      clearTimeout(timer);
-      try {
-        resolve(JSON.parse(stdout.trim()) as JourneyRun);
-      } catch (err) {
-        reject(new Error(stderr || "Journey test parse failed"));
-      }
-    });
-  });
-}
-
-async function performAuditScan(url: string, overridePatches?: string[]): Promise<AuditRun> {
-  if (process.env.VERCEL) {
-    return runServerlessAudit(url, overridePatches);
-  }
-  try {
-    const scan = await runAxeScan(url);
-    if (!scan || scan.status === "error") {
-      return runServerlessAudit(url, overridePatches);
-    }
-    return scan;
-  } catch (err) {
-    console.warn("Playwright runner unavailable during remediation verification, using serverless scanner:", err instanceof Error ? err.message : err);
-    return runServerlessAudit(url, overridePatches);
-  }
-}
-
-async function performJourneyTest(url: string, overridePatches?: string[]): Promise<JourneyRun> {
-  if (process.env.VERCEL) {
-    return runServerlessJourney(url, overridePatches);
-  }
-  try {
-    const journey = await runJourneyTest(url);
-    if (!journey || journey.status === "error") {
-      return runServerlessJourney(url, overridePatches);
-    }
-    return journey;
-  } catch (err) {
-    console.warn("Playwright journey runner unavailable during remediation verification, using serverless journey:", err instanceof Error ? err.message : err);
-    return runServerlessJourney(url, overridePatches);
-  }
+async function performJourneyTest(demoUrl: string, overridePatches?: string[]): Promise<JourneyRun> {
+  const internalScanUrl = resolveInternalScanUrl();
+  return executeJourneyScan(demoUrl, internalScanUrl, overridePatches);
 }
 
 export async function GET() {
@@ -291,6 +204,7 @@ export async function POST(request: NextRequest) {
         appliedDiff: patchDef.diff,
         automationSafety: patchDef.automationSafety,
         safetyGate,
+        engine: getEngine(),
         beforeScan: {
           totalIssues: beforeScan.issueCounts.total,
           targetedRuleViolations: beforeTargetedCount > 0 ? beforeTargetedCount : 1,
@@ -336,11 +250,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
+    return NextResponse.json({
+      code: "INVALID_ACTION",
+      message: "Unsupported remediation action requested.",
+      retryable: false,
+      error: "Invalid action."
+    }, { status: 400 });
   } catch (error) {
     console.error("Diagnostic log - /api/remediation internal failure:", error);
     return NextResponse.json(
-      { error: "The fix could not be applied. Check the remediation API response." },
+      {
+        code: "REMEDIATION_FAILED",
+        message: "The remediation operation encountered an issue. Please retry.",
+        retryable: true,
+        error: "The fix could not be applied. Check the remediation API response."
+      },
       { status: 500 }
     );
   }

@@ -40,7 +40,7 @@ export default function FocusMapPage() {
             type="button"
             onClick={runJourneyTests}
             disabled={isRunning}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs"
           >
             {isRunning ? (
               <>
@@ -77,7 +77,7 @@ export default function FocusMapPage() {
             <button
               type="button"
               onClick={runJourneyTests}
-              className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+              className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
             >
               Capture Visual Focus Map
             </button>
@@ -208,8 +208,60 @@ export default function FocusMapPage() {
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center text-xs text-neutral-500">
-                  Screenshot unavailable.
+                <div className="relative border border-[#BAE6FD] rounded-xl overflow-hidden bg-white">
+                  <div className="p-2.5 bg-[#F0F9FF] border-b border-[#BAE6FD] flex items-center justify-between text-xs text-[#0369A1]">
+                    <span className="font-semibold">Computed from page structure, not a recorded key-press run</span>
+                    <span className="font-mono text-[11px]">Sandboxed /demo Iframe</span>
+                  </div>
+                  <div className="relative w-full h-[600px] overflow-hidden bg-slate-50">
+                    <iframe
+                      src="/demo"
+                      title="Sandboxed Demo Target"
+                      className="w-full h-full border-0 pointer-events-none opacity-90"
+                      sandbox="allow-same-origin allow-scripts"
+                    />
+                    {/* Badge Overlay for DOM Stops */}
+                    <div className="absolute inset-0 pointer-events-auto overflow-auto p-4 bg-white/40 backdrop-blur-[1px]">
+                      <div className="space-y-2 max-w-md mx-auto my-6">
+                        <div className="text-xs font-bold text-neutral-800 uppercase tracking-wider mb-2 text-center">
+                          DOM-Computed Tab Sequence
+                        </div>
+                        {displayStops.map((stop) => {
+                          const isSelected = activeStop?.order === stop.order;
+                          return (
+                            <div
+                              key={stop.order}
+                              onClick={() => setActiveStop(isSelected ? null : stop)}
+                              className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all cursor-pointer shadow-xs ${
+                                isSelected
+                                  ? "bg-white border-[#0369A1] ring-2 ring-[#0369A1]"
+                                  : "bg-white/95 border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                                  stop.visibleFocus ? "bg-[#0369A1]" : "bg-rose-600"
+                                }`}>
+                                  {stop.order}
+                                </span>
+                                <div>
+                                  <code className="font-mono font-semibold text-neutral-900 block">{stop.selector}</code>
+                                  <span className="text-[11px] text-neutral-500">
+                                    Name: <span className="font-medium text-neutral-800">{stop.name || "(none)"}</span> • Role: {stop.role}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                stop.visibleFocus ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"
+                              }`}>
+                                {stop.visibleFocus ? "Visible Focus" : "Missing Ring"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

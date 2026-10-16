@@ -107,7 +107,7 @@ export default function FixReviewPage() {
           </div>
           <Link
             href="/verification"
-            className="px-4 py-1.5 bg-neutral-950 text-white rounded-full font-semibold text-xs hover:bg-neutral-800 transition-colors shrink-0 text-center shadow-xs"
+            className="px-4 py-1.5 bg-[#0369A1] hover:bg-[#0284C7] text-white rounded-full font-semibold text-xs transition-colors shrink-0 text-center shadow-xs"
           >
             View Verification Receipt →
           </Link>
@@ -245,7 +245,7 @@ export default function FixReviewPage() {
                 <span className="font-bold text-xs uppercase tracking-wider text-neutral-500 block mb-2">
                   Proposed Patch Diff (Allowlisted Template)
                 </span>
-                <pre className="p-4 bg-neutral-950 text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                <pre className="p-4 bg-[#0F2A43] text-neutral-100 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
                   {fix.diff}
                 </pre>
               </div>
@@ -271,7 +271,7 @@ export default function FixReviewPage() {
                         type="button"
                         onClick={() => setConfirmFixId(fix.id)}
                         disabled={isApplying}
-                        className="px-5 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-xs"
+                        className="px-5 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
                       >
                         Review &amp; Approve Patch
                       </button>
@@ -284,7 +284,7 @@ export default function FixReviewPage() {
                           type="button"
                           onClick={() => handleApprove(fix.id)}
                           disabled={isApplying}
-                          className="px-4 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+                          className="px-4 py-1.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
                         >
                           Confirm
                         </button>
@@ -309,7 +309,7 @@ export default function FixReviewPage() {
                       </button>
                       <Link
                         href="/verification"
-                        className="px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+                        className="px-4 py-2 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
                       >
                         Verification Receipt &rarr;
                       </Link>

@@ -45,11 +45,14 @@ export interface Issue {
   rollbackToken?: string;
 }
 
+export type ScanEngine = "full" | "lightweight";
+
 export interface AuditRun {
   id: string;
   timestamp: string;
   target: string;
   status: "success" | "error" | "running";
+  engine?: ScanEngine;
   durationMs?: number;
   passesCount?: number;
   incompleteCount?: number;
@@ -111,6 +114,7 @@ export interface JourneyRun {
   timestamp: string;
   target: string;
   status: "success" | "error";
+  engine?: ScanEngine;
   tasks: JourneyTask[];
   focusStops: FocusStop[];
   screenshotBase64?: string;
@@ -127,6 +131,7 @@ export interface PersonaTaskResult {
   persona: string;
   task: string;
   completed: boolean;
+  engine?: ScanEngine;
   failingStep?: string;
   tabPresses?: number;
   issueIds: string[];
@@ -182,6 +187,7 @@ export interface FixReceipt {
   appliedDiff: string;
   automationSafety: AutomationSafety;
   safetyGate: SafetyGateResult;
+  engine?: ScanEngine;
   beforeScan: {
     totalIssues: number;
     targetedRuleViolations: number;
@@ -224,6 +230,7 @@ export interface RemediationState {
 export interface VerificationReport {
   auditRunId: string;
   timestamp: string;
+  engine?: ScanEngine;
   resolvedCount: number;
   remainingCount: number;
   results: VerificationResult[];

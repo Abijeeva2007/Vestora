@@ -50,7 +50,7 @@ export default function JourneyTestingPage() {
             type="button"
             onClick={runJourneyTests}
             disabled={isRunning}
-            className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs"
+            className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs"
           >
             {isRunning ? (
               <>
@@ -87,7 +87,7 @@ export default function JourneyTestingPage() {
             <button
               type="button"
               onClick={runJourneyTests}
-              className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+              className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
             >
               Start First Journey Run
             </button>
@@ -128,7 +128,7 @@ export default function JourneyTestingPage() {
                 Unreachable Navigation
               </p>
               <div className="text-3xl font-extrabold text-amber-600 my-1">
-                {currentJourney.unreachableControlsCount} links
+                {currentJourney.unreachableControlsCount} {currentJourney.unreachableControlsCount === 1 ? "link" : "links"}
               </div>
               <p className="text-xs text-neutral-500">
                 Hover-only dropdown bypasses keyboard access
@@ -151,17 +151,25 @@ export default function JourneyTestingPage() {
           </div>
 
           {/* Test Run Metadata Strip */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-100 border border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div>
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#F0F9FF] border border-[#BAE6FD] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-neutral-900">Run Target: </span>
               <code className="text-neutral-900 font-mono text-xs">{currentJourney.target}</code>
-              <span className="text-neutral-500 ml-3">
+              <span className="text-neutral-500">
                 • Executed: {new Date(currentJourney.timestamp).toLocaleTimeString()}
               </span>
+              <span className="text-[11px] font-semibold bg-white border border-[#BAE6FD] text-[#0369A1] px-2.5 py-0.5 rounded-full">
+                {currentJourney.engine === "full" ? "Engine: Full browser" : "Engine: Lightweight hosted scan"}
+              </span>
+              {currentJourney.engine === "lightweight" && (
+                <span className="text-[11px] font-medium text-[#0369A1] block w-full sm:w-auto mt-1 sm:mt-0">
+                  (DOM-computed tab order, not live key presses)
+                </span>
+              )}
             </div>
             <Link
               href="/focus-map"
-              className="inline-flex items-center gap-1.5 font-semibold text-neutral-900 hover:underline"
+              className="inline-flex items-center gap-1.5 font-semibold text-[#0369A1] hover:underline shrink-0"
             >
               <span>View Visual Tab-Order Map ({currentJourney.focusStops.length} stops)</span>
               <span>→</span>
@@ -223,14 +231,14 @@ export default function JourneyTestingPage() {
                         <td className="px-5 py-4 font-mono text-xs text-neutral-900">
                           {task.tabPresses > 0 ? `${task.tabPresses} tabs` : "N/A"}
                         </td>
-                        <td className="px-5 py-4 text-xs text-rose-600 max-w-xs truncate font-medium">
+                        <td className="px-5 py-4 text-xs text-rose-600 max-w-xs break-words line-clamp-2 font-medium">
                           {task.failingStep || "None (All steps completed)"}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <button
                             type="button"
                             onClick={() => setSelectedTask(isSelected ? null : task)}
-                            className="px-3.5 py-1 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
+                            className="px-3.5 py-1 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
                           >
                             {isSelected ? "Hide Steps" : "Inspect Steps"}
                           </button>

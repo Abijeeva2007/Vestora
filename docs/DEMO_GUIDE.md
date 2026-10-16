@@ -58,7 +58,7 @@
   1. On `/journeys`, click **Run Journey Tests** (or inspect recent execution).
   2. Review the 3 simulated personas:
      - Scenario 1: *Keyboard-Only Scholar* (Header & Program Actions)
-     - Scenario 2: *Screen Reader / Keyboard Applicant* (Scholarship Application Flow)
+     - Scenario 2: *Keyboard and form-label check (simulated)* (Scholarship Application Flow)
      - Scenario 3: *Low-Vision Zoom / Mobile User* (320px Narrow-Screen Reflow)
   3. Click over to `/focus-map` to inspect the visual tab sequence.
 - **Expected Observation:**

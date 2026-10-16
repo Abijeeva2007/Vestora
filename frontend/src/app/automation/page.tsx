@@ -359,7 +359,7 @@ export default function AutomationPage() {
               <button
                 type="submit"
                 disabled={testStatus === "testing"}
-                className="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shrink-0 shadow-xs"
+                className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 transition-colors shrink-0 shadow-xs"
               >
                 {testStatus === "testing" ? "Testing..." : "Test Webhook Ping"}
               </button>
@@ -421,7 +421,7 @@ export default function AutomationPage() {
             <button
               type="button"
               onClick={handleDownloadJson}
-              className="px-4 py-2 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors shadow-xs"
+              className="px-4 py-2 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold transition-colors shadow-xs"
             >
               Download .json
             </button>
@@ -432,7 +432,7 @@ export default function AutomationPage() {
           tabIndex={0}
           role="region"
           aria-label="n8n workflow JSON preview"
-          className="p-4 bg-neutral-950 text-neutral-200 rounded-xl text-xs font-mono overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
+          className="p-4 bg-[#0F2A43] text-neutral-200 rounded-xl text-xs font-mono overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed focus:outline-none focus:ring-1 focus:ring-neutral-400"
         >
           {JSON.stringify(SAMPLE_N8N_WORKFLOW, null, 2)}
         </pre>

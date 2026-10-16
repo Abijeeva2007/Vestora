@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Desktop Centered Navigation */}
-          <nav className="hidden xl:flex items-center gap-1 bg-neutral-100/70 p-1.5 rounded-full border border-neutral-200/60" aria-label="Main Navigation">
+          <nav className="hidden lg:flex items-center gap-1 bg-neutral-100/70 p-1.5 rounded-full border border-neutral-200/60" aria-label="Main Navigation">
             {NAV_ITEMS.map((item) => {
               const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
               return (
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                     active
                       ? "bg-white text-neutral-950 shadow-xs"
                       : "text-neutral-600 hover:text-neutral-950 hover:bg-white/50"
@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/demo"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 shadow-xs"
             >
               <span>Demo Target</span>
               <svg className="w-3.5 h-3.5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -102,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={runAudit}
               disabled={isRunning}
-              className="px-4 py-2 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+              className="px-4 py-2 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
             >
               {isRunning ? (
                 <>
@@ -122,12 +122,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Mobile Menu Trigger */}
-          <div className="flex xl:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <button
               type="button"
               onClick={runAudit}
               disabled={isRunning}
-              className="sm:hidden px-3 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-semibold"
+              className="sm:hidden px-3 py-1.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold whitespace-nowrap"
             >
               {isRunning ? "Scanning..." : "Scan"}
             </button>
@@ -184,7 +184,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           aria-current={active ? "page" : undefined}
                           className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                             active
-                              ? "bg-neutral-950 text-white"
+                              ? "bg-[#0369A1] text-white"
                               : "text-neutral-700 hover:bg-neutral-100"
                           }`}
                         >
@@ -225,7 +225,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-medium text-neutral-800">Playwright & axe-core Runtime: Active</span>
           </div>
           <p className="font-medium">
-            AccessAble AI • Autonomous Accessibility Remediation Pipeline • BYTEATHON 2026
+            AccessAble AI • Approval-based accessibility remediation and verification • BYTEATHON 2026
           </p>
         </footer>
       </div>

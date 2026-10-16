@@ -310,7 +310,7 @@ export async function runServerlessJourney(targetUrl: string, overridePatches?: 
   const task2: JourneyTask = {
     id: "task-form-journey",
     title: "Scholarship Application Flow",
-    persona: "Screen Reader / Keyboard Applicant",
+    persona: "Keyboard and form-label check (simulated)",
     condition: "Full Multi-Step Form",
     status: task2Status,
     tabPresses: 6,
