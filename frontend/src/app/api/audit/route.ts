@@ -4,7 +4,7 @@ import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { z } from "zod";
 import type { AuditRun } from "@/types";
 import { getStorageDir } from "@/lib/remediation-engine";
-import { executeAuditScan } from "@/lib/scan-engine";
+import { executeAuditScan, executePublicScan } from "@/lib/scan-engine";
 import {
   sameOriginOnly,
   rateLimit,
@@ -12,6 +12,11 @@ import {
   releaseRunLock,
   validateTargetUrl,
 } from "@/lib/security";
+import {
+  isPublicScanEnabled,
+  validatePublicScanUrl,
+  checkRobotsTxt,
+} from "@/lib/public-scan";
 
 const AuditRequestSchema = z.object({
   targetUrl: z.string().optional(),
@@ -48,6 +53,7 @@ function resolveInternalScanUrl(): string {
 export async function GET() {
   return NextResponse.json({
     latestRun: inMemoryLatestRun,
+    publicScanEnabled: isPublicScanEnabled(),
   });
 }
 
@@ -147,31 +153,84 @@ export async function POST(request: NextRequest) {
 
     const clientHost = request.headers.get("host") || "localhost:3000";
     const resolvedDemoUrl = resolveDemoUrl(request);
+    let auditRun: AuditRun;
 
-    if (body.targetUrl) {
-      const urlCheck = validateTargetUrl(body.targetUrl as string, clientHost);
-      if (!urlCheck.valid) {
+    const requestedUrl = typeof body.targetUrl === "string" ? body.targetUrl.trim() : "";
+
+    // Determine if request is targeting local demo or a public page
+    const isDemoTarget =
+      !requestedUrl ||
+      requestedUrl === DEMO_PATH ||
+      requestedUrl === "/demo/sandbox" ||
+      requestedUrl.endsWith("/demo") ||
+      requestedUrl.includes("/demo?");
+
+    if (isDemoTarget) {
+      if (requestedUrl) {
+        const urlCheck = validateTargetUrl(requestedUrl, clientHost);
+        if (!urlCheck.valid) {
+          return NextResponse.json(
+            {
+              code: "FORBIDDEN_TARGET",
+              message: urlCheck.error || "Scanning external targets is strictly disabled.",
+              error: "Security violation: Scanning is strictly restricted to the verified demo route (/demo).",
+              retryable: false,
+            },
+            { status: 403 }
+          );
+        }
+      }
+
+      const internalScanUrl = resolveInternalScanUrl();
+      auditRun = await executeAuditScan(resolvedDemoUrl, internalScanUrl);
+    } else {
+      // Public target scan requested
+      if (!isPublicScanEnabled()) {
         return NextResponse.json(
           {
-            code: "FORBIDDEN_TARGET",
-            message: urlCheck.error || "Scanning external targets is strictly disabled.",
-            error: "Security violation: Scanning is strictly restricted to the verified demo route (/demo).",
+            code: "PUBLIC_SCAN_DISABLED",
+            message: "Public page scanning is not enabled.",
+            error: "Public page scanning is not enabled.",
             retryable: false,
           },
           { status: 403 }
         );
       }
-    }
 
-    // Run scanner via unified engine
-    const internalScanUrl = resolveInternalScanUrl();
-    const auditRun = await executeAuditScan(resolvedDemoUrl, internalScanUrl);
+      const val = await validatePublicScanUrl(requestedUrl);
+      if (!val.valid || !val.normalized) {
+        return NextResponse.json(
+          {
+            code: "FORBIDDEN_TARGET",
+            message: val.error || "URL violates security rules.",
+            error: val.error || "URL violates security rules.",
+            retryable: false,
+          },
+          { status: 400 }
+        );
+      }
+
+      const robotsCheck = await checkRobotsTxt(new URL(val.normalized));
+      if (!robotsCheck.allowed) {
+        return NextResponse.json(
+          {
+            code: "ROBOTS_DISALLOWED",
+            message: robotsCheck.reason || "Path disallowed by robots.txt.",
+            error: robotsCheck.reason || "Path disallowed by robots.txt.",
+            retryable: false,
+          },
+          { status: 403 }
+        );
+      }
+
+      auditRun = await executePublicScan(val.normalized);
+    }
 
     if (auditRun.status === "error") {
       return NextResponse.json(
         {
           code: "AUDIT_SCAN_ERROR",
-          message: "The accessibility scan could not be completed. Please retry.",
+          message: auditRun.errorMessage || "The accessibility scan could not be completed. Please retry.",
           retryable: true,
         },
         { status: 500 }

@@ -13,8 +13,9 @@ import { StopBadge } from "@/components/ui/StopBadge";
 import { AiBadge } from "@/components/ui/AiBadge";
 
 export default function AuditsPage() {
-  const { currentRun, isRunning, error, runAudit, fetchLatestRun } = useAuditStore();
+  const { currentRun, isRunning, error, runAudit, fetchLatestRun, publicScanEnabled } = useAuditStore();
   const [selectedTarget, setSelectedTarget] = useState("/demo");
+  const [publicUrlInput, setPublicUrlInput] = useState("");
 
   // AI Assist State (Off by default)
   const [isAiConfigured, setIsAiConfigured] = useState(false);
@@ -37,6 +38,14 @@ export default function AuditsPage() {
         setIsAiConfigured(false);
       });
   }, [fetchLatestRun]);
+
+  const handleStartAudit = () => {
+    if (selectedTarget === "public") {
+      runAudit(publicUrlInput);
+    } else {
+      runAudit();
+    }
+  };
 
   const handleGenerateSummary = async () => {
     if (!currentRun || !aiEnabled) return;
@@ -129,13 +138,21 @@ export default function AuditsPage() {
               <option value="/demo">
                 Local Scholarship Application (/demo) — controlled test target
               </option>
+              <option value="public" disabled={!publicScanEnabled}>
+                Public page (read-only){!publicScanEnabled ? " — (Disabled)" : ""}
+              </option>
             </select>
+            {!publicScanEnabled && (
+              <p className="text-xs text-neutral-500 font-medium mt-2">
+                Public page scanning is not enabled
+              </p>
+            )}
           </div>
 
           <button
             type="button"
-            onClick={runAudit}
-            disabled={isRunning}
+            onClick={handleStartAudit}
+            disabled={isRunning || (selectedTarget === "public" && !publicUrlInput.trim())}
             className="px-6 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0 shadow-xs flex items-center justify-center gap-2"
           >
             {isRunning ? (
@@ -151,6 +168,26 @@ export default function AuditsPage() {
             )}
           </button>
         </div>
+
+        {selectedTarget === "public" && publicScanEnabled && (
+          <div className="mt-4 max-w-2xl">
+            <label htmlFor="public-url-input" className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+              Target Public HTTPS URL
+            </label>
+            <input
+              id="public-url-input"
+              type="url"
+              placeholder="https://example.com/page"
+              value={publicUrlInput}
+              onChange={(e) => setPublicUrlInput(e.target.value)}
+              disabled={isRunning}
+              className="w-full px-4 py-2.5 rounded-full border border-neutral-300 bg-white text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 shadow-xs"
+            />
+            <p className="text-[11px] text-neutral-500 mt-1.5">
+              Read-only scan. Hostname must match SCAN_ALLOWLIST. Enforces robots.txt verification and strict SSRF defenses.
+            </p>
+          </div>
+        )}
 
         <p className="text-xs text-neutral-500 mt-4 leading-relaxed">
           Scanning executes on headless Chromium to evaluate DOM nodes against automated axe-core rules. Automated checks identify programmatic violations and should be complemented by assistive journey testing and manual review for full accessibility coverage.
@@ -261,16 +298,22 @@ export default function AuditsPage() {
               <div>
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h2 className="text-lg font-bold text-neutral-950">Latest Audit Run Summary</h2>
-                  <StatusPill status="pass" label="Verified Run" />
+                  <StatusPill
+                    status="pass"
+                    label={currentRun.isSnapshot || currentRun.snapshotLabel ? (currentRun.snapshotLabel || "Saved snapshot") : "Verified Run"}
+                  />
                   <span className="text-[11px] font-semibold bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369A1] px-2.5 py-0.5 rounded-full">
                     {currentRun.engine === "full" ? "Engine: Full browser" : "Engine: Lightweight hosted scan"}
                   </span>
                 </div>
                 <p className="text-xs text-neutral-500">
-                  Run ID: <span className="font-mono">{currentRun.id}</span> • Completed: {new Date(currentRun.timestamp).toLocaleTimeString()}
+                  Target: <span className="font-mono text-neutral-700">{currentRun.target}</span> • Completed: {new Date(currentRun.timestamp).toLocaleString()}
                   {currentRun.durationMs ? ` • Scan Duration: ${(currentRun.durationMs / 1000).toFixed(2)}s` : ""}
                   {typeof currentRun.passesCount === "number" ? ` • ${currentRun.passesCount} Rules Passed` : ""}
                 </p>
+                <div className="text-[11px] font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200/80 px-2.5 py-1 rounded-lg mt-2 inline-block">
+                  Automated checks only. Not a statement of compliance.
+                </div>
               </div>
 
               <Link
@@ -281,6 +324,13 @@ export default function AuditsPage() {
                 <span>→</span>
               </Link>
             </div>
+
+            {/* Lightweight scan notice */}
+            {currentRun.engine === "lightweight" && (
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium mb-6">
+                Lightweight scan: rules that need real layout, such as color contrast, may not be evaluated.
+              </div>
+            )}
 
             {/* Severity stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-8">
@@ -312,7 +362,11 @@ export default function AuditsPage() {
 
             {/* Violations Preview List */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 mb-4">Detected Rule Violations</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900">
+                  automated checks reported {currentRun.issueCounts.total} issues
+                </h3>
+              </div>
               <ul className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl overflow-hidden" role="list">
                 {currentRun.issues.map((issue, idx) => (
                   <li key={issue.id} className="p-4 sm:p-5 bg-white hover:bg-neutral-50/70 transition-colors flex items-start gap-4">

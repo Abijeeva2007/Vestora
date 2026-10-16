@@ -65,6 +65,12 @@ export interface AuditRun {
   };
   issues: Issue[];
   errorMessage?: string;
+  isSnapshot?: boolean;
+  snapshotLabel?: string;
+  engineNotice?: string;
+  complianceNotice?: string;
+  findingsSummary?: string;
+  isPublicTarget?: boolean;
 }
 
 // ---------------------------------------------------------------------------

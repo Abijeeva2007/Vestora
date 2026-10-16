@@ -8,8 +8,9 @@ interface AuditStore {
   isRunning: boolean;
   error: string | null;
   hasLoadedInitial: boolean;
+  publicScanEnabled: boolean;
   fetchLatestRun: () => Promise<void>;
-  runAudit: () => Promise<void>;
+  runAudit: (targetUrl?: unknown) => Promise<void>;
   clearError: () => void;
 }
 
@@ -18,6 +19,7 @@ export const useAuditStore = create<AuditStore>((set, get) => ({
   isRunning: false,
   error: null,
   hasLoadedInitial: false,
+  publicScanEnabled: false,
 
   clearError: () => set({ error: null }),
 
@@ -27,30 +29,34 @@ export const useAuditStore = create<AuditStore>((set, get) => ({
       const res = await fetch("/api/audit");
       if (res.ok) {
         const data = await res.json();
-        if (data.latestRun) {
-          set({ currentRun: data.latestRun, hasLoadedInitial: true });
-          return;
-        }
+        set({
+          currentRun: data.latestRun || null,
+          publicScanEnabled: Boolean(data.publicScanEnabled),
+          hasLoadedInitial: true,
+        });
+        return;
       }
     } catch {}
     set({ hasLoadedInitial: true });
   },
 
-  runAudit: async () => {
+  runAudit: async (targetUrl?: unknown) => {
     if (get().isRunning) return;
     set({ isRunning: true, error: null });
 
     try {
+      const validUrl = typeof targetUrl === "string" && targetUrl.trim() !== "" ? targetUrl.trim() : undefined;
+      const payload = validUrl ? { targetUrl: validUrl } : {};
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || data.errorMessage || `Audit failed with status ${res.status}`);
+        throw new Error(data.message || data.error || data.errorMessage || `Audit failed with status ${res.status}`);
       }
 
       set({

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { existsSync } from "node:fs";
 import type { AuditRun, JourneyRun, ScanEngine } from "@/types";
 import { runServerlessAudit, runServerlessJourney } from "./serverless-scanner";
+import { fetchPublicHtml, runLightweightPublicScan } from "./public-scan";
 
 export function getEngine(): ScanEngine {
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT) {
@@ -45,6 +46,37 @@ export async function executeAuditScan(
   }
 }
 
+export async function executePublicScan(targetUrl: string): Promise<AuditRun> {
+  const engine = getEngine();
+
+  if (engine === "lightweight") {
+    const { html } = await fetchPublicHtml(targetUrl);
+    return runLightweightPublicScan(targetUrl, html);
+  }
+
+  try {
+    const res = await runFullPlaywrightAxe(targetUrl);
+    if (!res || res.status === "error") {
+      const { html } = await fetchPublicHtml(targetUrl);
+      return runLightweightPublicScan(targetUrl, html);
+    }
+    return {
+      ...res,
+      engine: "full",
+      target: targetUrl,
+      isSnapshot: true,
+      snapshotLabel: "Saved snapshot",
+      isPublicTarget: true,
+      complianceNotice: "Automated checks only. Not a statement of compliance.",
+      findingsSummary: `automated checks reported ${res.issueCounts.total} issues`,
+    };
+  } catch (err) {
+    console.warn("Full browser public audit failed, falling back to lightweight scan:", err instanceof Error ? err.message : err);
+    const { html } = await fetchPublicHtml(targetUrl);
+    return runLightweightPublicScan(targetUrl, html);
+  }
+}
+
 export async function executeJourneyScan(
   targetUrl: string,
   internalScanUrl: string,
@@ -79,7 +111,8 @@ async function runFullPlaywrightAxe(url: string): Promise<AuditRun> {
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn("sh", ["-c", `node "${scriptPath}" "${url}"`], {
+    // Directly spawn node without a shell wrapper
+    const child = spawn(process.execPath, [scriptPath, url], {
       cwd: process.cwd(),
       env: { ...process.env, TARGET_URL: url },
       stdio: ["ignore", "pipe", "pipe"],
@@ -129,7 +162,8 @@ async function runFullPlaywrightJourney(url: string): Promise<JourneyRun> {
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn("sh", ["-c", `node "${scriptPath}" "${url}"`], {
+    // Directly spawn node without a shell wrapper
+    const child = spawn(process.execPath, [scriptPath, url], {
       cwd: process.cwd(),
       env: { ...process.env, TARGET_URL: url },
       stdio: ["ignore", "pipe", "pipe"],
@@ -170,3 +204,4 @@ async function runFullPlaywrightJourney(url: string): Promise<JourneyRun> {
     });
   });
 }
+

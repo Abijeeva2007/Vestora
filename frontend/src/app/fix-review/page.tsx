@@ -30,9 +30,22 @@ export default function FixReviewPage() {
   } = useRemediationStore();
 
   const [confirmFixId, setConfirmFixId] = useState<string | null>(null);
+  const [isThirdPartyTarget, setIsThirdPartyTarget] = useState(false);
 
   useEffect(() => {
     fetchRemediationData();
+    fetch("/api/audit")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.latestRun) {
+          const run = data.latestRun;
+          const isPub =
+            Boolean(run.isPublicTarget) ||
+            (typeof run.target === "string" && run.target.startsWith("https://") && !run.target.includes("/demo"));
+          setIsThirdPartyTarget(isPub);
+        }
+      })
+      .catch(() => {});
   }, [fetchRemediationData]);
 
   const handleApprove = async (fixId: string) => {
@@ -71,7 +84,7 @@ export default function FixReviewPage() {
               <button
                 type="button"
                 onClick={() => rollbackFix()}
-                disabled={isRollingBack || isApplying}
+                disabled={isRollingBack || isApplying || isThirdPartyTarget}
                 className="px-4 py-2 rounded-full border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
               >
                 {isRollingBack ? "Rolling back..." : "Rollback Latest"}
@@ -80,7 +93,7 @@ export default function FixReviewPage() {
             <button
               type="button"
               onClick={() => resetAll()}
-              disabled={isRollingBack || isApplying}
+              disabled={isRollingBack || isApplying || isThirdPartyTarget}
               className="px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-xs"
             >
               Reset Demo to Baseline
@@ -88,6 +101,13 @@ export default function FixReviewPage() {
           </div>
         }
       />
+
+      {isThirdPartyTarget && (
+        <div className="p-4 sm:p-5 rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 text-xs font-semibold flex items-center gap-3">
+          <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0">!</span>
+          <span>Fix preview is not available for third-party pages</span>
+        </div>
+      )}
 
       {/* Notifications */}
       {error && (
@@ -270,7 +290,7 @@ export default function FixReviewPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmFixId(fix.id)}
-                        disabled={isApplying}
+                        disabled={isApplying || isThirdPartyTarget}
                         className="px-5 py-2.5 rounded-full bg-[#0369A1] hover:bg-[#0284C7] text-white text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
                       >
                         Review &amp; Approve Patch

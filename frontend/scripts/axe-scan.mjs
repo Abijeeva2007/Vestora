@@ -78,18 +78,49 @@ async function runScan(targetUrl) {
       targetOrigin = new URL(targetUrl).origin;
     } catch {}
 
+    const isPublicTarget = targetUrl.startsWith("https://");
+
     await page.route("**/*", (route) => {
       try {
         const reqUrl = new URL(route.request().url());
-        if (
-          !targetOrigin ||
-          reqUrl.origin === targetOrigin ||
-          reqUrl.protocol === "data:" ||
-          reqUrl.protocol === "blob:"
-        ) {
-          route.continue();
+        if (!isPublicTarget) {
+          if (
+            !targetOrigin ||
+            reqUrl.origin === targetOrigin ||
+            reqUrl.protocol === "data:" ||
+            reqUrl.protocol === "blob:"
+          ) {
+            route.continue();
+          } else {
+            route.abort();
+          }
         } else {
-          route.abort();
+          // Public target: allow target origin and public subresources (https, data, blob)
+          // Block non-https, private IPs, loopback, and cloud metadata
+          if (reqUrl.protocol === "data:" || reqUrl.protocol === "blob:") {
+            route.continue();
+            return;
+          }
+          if (reqUrl.protocol !== "https:") {
+            route.abort();
+            return;
+          }
+          const host = reqUrl.hostname.toLowerCase();
+          if (
+            host === "localhost" ||
+            host.endsWith(".localhost") ||
+            host.endsWith(".local") ||
+            host === "127.0.0.1" ||
+            host === "::1" ||
+            host === "169.254.169.254" ||
+            host === "metadata.google.internal" ||
+            host.startsWith("10.") ||
+            host.startsWith("192.168.")
+          ) {
+            route.abort();
+            return;
+          }
+          route.continue();
         }
       } catch {
         route.abort();
@@ -164,7 +195,16 @@ async function runScan(targetUrl) {
       passesCount,
       incompleteCount,
       issueCounts,
-      issues
+      issues,
+      ...(isPublicTarget
+        ? {
+            isSnapshot: true,
+            snapshotLabel: "Saved snapshot",
+            isPublicTarget: true,
+            complianceNotice: "Automated checks only. Not a statement of compliance.",
+            findingsSummary: `automated checks reported ${issueCounts.total} issues`
+          }
+        : {})
     };
 
     process.stdout.write(JSON.stringify(auditRun) + "\n");
